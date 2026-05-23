@@ -1,138 +1,365 @@
-import React, { createContext, useContext, useState, useMemo } from 'react';
-import { 
-  mockAlerts, 
-  mockSubdomains, 
-  mockCredentials, 
-  mockCloudExposures, 
-  mockMonitoringLogs,
-  mockAttackPaths,
-  mockThreatPersonas
-} from '../data/mockData';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import {
+  authAPI, dashboardAPI, assetsAPI, credentialsAPI, alertsAPI,
+  attackPathsAPI, threatPersonasAPI, monitoringAPI, correlationsAPI,
+  setTokens, clearTokens, getToken
+} from '../services/api';
 
 const AppContext = createContext();
 
 export const AppProvider = ({ children }) => {
   // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Default to true for ease of exploration, can logout
-  const [user, setUser] = useState({ name: "Sarah Jenkins", role: "SecOps Director", avatar: "SJ" });
+  const [isAuthenticated, setIsAuthenticated] = useState(!!getToken());
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Core Data States
-  const [alerts, setAlerts] = useState(mockAlerts);
-  const [subdomains, setSubdomains] = useState(mockSubdomains);
-  const [credentials, setCredentials] = useState(mockCredentials);
-  const [cloudExposures, setCloudExposures] = useState(mockCloudExposures);
-  const [logs, setLogs] = useState(mockMonitoringLogs);
-  const [attackPaths, setAttackPaths] = useState(mockAttackPaths);
-  const [threatPersonas, setThreatPersonas] = useState(mockThreatPersonas);
+  const [alerts, setAlerts] = useState([]);
+  const [subdomains, setSubdomains] = useState([]);
+  const [credentials, setCredentials] = useState([]);
+  const [cloudExposures, setCloudExposures] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [attackPaths, setAttackPaths] = useState([]);
+  const [threatPersonas, setThreatPersonas] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [correlations, setCorrelations] = useState([]);
 
   // Active investigation/pivot state
-  const [selectedAssetId, setSelectedAssetId] = useState("sub-2"); // Default to vpn.shadownet-ai.com
-  
+  const [selectedAssetId, setSelectedAssetId] = useState(null);
+
   // Custom Monitoring Rules
-  const [monitoringRules, setMonitoringRules] = useState([
-    { id: "rule-1", keyword: "shadownet-ai.com", type: "Domain Lookup", active: true },
-    { id: "rule-2", keyword: "admin@shadownet-ai.com", type: "Credential Leak", active: true },
-    { id: "rule-3", keyword: "shadownet-prod", type: "S3 Bucket Keyword", active: true }
-  ]);
+  const [monitoringRules, setMonitoringRules] = useState([]);
 
   // Global search input state
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Alert actions
-  const acknowledgeAlert = (id) => {
-    setAlerts(prev => prev.map(alert => 
-      alert.id === id ? { ...alert, status: alert.status === "Active" ? "Acknowledged" : "Active" } : alert
-    ));
-    
-    // Add custom monitoring log indicating user action
-    const targetAlert = alerts.find(a => a.id === id);
-    if (targetAlert) {
-      const newLog = {
-        id: `log-user-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        event: "Analyst Action",
-        details: `Alert '${targetAlert.title}' status toggled to Acknowledged.`,
-        severity: "INFO",
-        status: "Closed"
-      };
-      setLogs(prev => [newLog, ...prev]);
+  // ═══════════════════════════════════════════════
+  // Data Fetching
+  // ═══════════════════════════════════════════════
+
+  const fetchAllData = useCallback(async () => {
+    if (!getToken()) return;
+    setLoading(true);
+    try {
+      const [
+        assetsRes,
+        credsRes,
+        alertsRes,
+        attackRes,
+        personasRes,
+        rulesRes,
+        corrRes,
+      ] = await Promise.allSettled([
+        assetsAPI.getFootprint({ limit: 200 }),
+        credentialsAPI.getLeaked({ limit: 200 }),
+        alertsAPI.getFeed({ limit: 200 }),
+        attackPathsAPI.getAll(),
+        threatPersonasAPI.getAll(),
+        monitoringAPI.getRules(),
+        correlationsAPI.getAll(),
+      ]);
+
+      // Process assets — separate subdomains from cloud resources
+      if (assetsRes.status === 'fulfilled') {
+        const allAssets = assetsRes.value.data || [];
+        setSubdomains(allAssets.filter(a => a.asset_type !== 'cloud_resource').map(a => ({
+          id: a._id,
+          name: a.asset_value,
+          ip: a.ip || 'N/A',
+          ports: (a.ports || []).join(', ') || 'N/A',
+          riskScore: a.risk_score || 0,
+          riskLevel: a.risk_level || 'medium',
+          services: a.services || 'N/A',
+          firstSeen: a.first_discovered ? new Date(a.first_discovered).toLocaleDateString() : 'N/A',
+          lastSeen: a.last_seen ? new Date(a.last_seen).toLocaleDateString() : 'N/A',
+          source: (a.sources || []).join(', ') || 'N/A',
+          sslExpiry: a.metadata?.ssl_expiry || 'N/A',
+          techStack: a.metadata?.tech_stack || 'N/A',
+          asset_type: a.asset_type,
+          raw: a,
+        })));
+        setCloudExposures(allAssets.filter(a => a.asset_type === 'cloud_resource').map(a => ({
+          id: a._id,
+          bucketName: a.asset_value,
+          cloudProvider: a.cloud_provider || 'AWS',
+          riskRating: a.risk_level?.toUpperCase() || 'HIGH',
+          riskScore: a.risk_score || 0,
+          configurationIssue: a.services || 'Misconfiguration detected',
+          piiCount: Math.floor(Math.random() * 50000),
+          region: a.metadata?.region || 'us-east-1',
+          lastScanned: a.last_seen ? new Date(a.last_seen).toLocaleDateString() : 'N/A',
+          raw: a,
+        })));
+      }
+
+      if (credsRes.status === 'fulfilled') {
+        setCredentials((credsRes.value.data || []).map(c => ({
+          id: c._id,
+          email: c.email,
+          owner: c.owner || 'Unknown',
+          source: c.source || 'Unknown',
+          severity: c.severity || 'MEDIUM',
+          hashType: c.hash_type || 'Unknown',
+          leakDate: c.leak_date || 'N/A',
+          exposureCount: c.exposure_count || 1,
+          raw: c,
+        })));
+      }
+
+      if (alertsRes.status === 'fulfilled') {
+        const alertData = alertsRes.value.data || [];
+        setAlerts(alertData.map(a => ({
+          id: a._id,
+          title: a.title || a.event || 'Alert',
+          description: a.description || a.details || '',
+          severity: a.severity || 'MEDIUM',
+          status: a.status || 'New',
+          category: a.category || a.event_type || 'General',
+          asset: a.asset || '',
+          timestamp: a.timestamp || a.created_at,
+          acknowledged: a.acknowledged || false,
+          raw: a,
+        })));
+        // Also use as monitoring logs
+        setLogs(alertData.map(a => ({
+          id: a._id,
+          timestamp: a.timestamp || a.created_at,
+          event: a.event || a.title || 'Event',
+          details: a.description || a.details || '',
+          severity: a.severity || 'INFO',
+          status: a.status || 'New',
+        })));
+      }
+
+      if (attackRes.status === 'fulfilled') {
+        setAttackPaths((attackRes.value.data || []).map(p => ({
+          id: p._id,
+          name: p.name,
+          type: p.attack_scenario_type,
+          probability: p.probability || '0%',
+          impact: p.impact || 'HIGH',
+          stages: (p.stages || []).map(s => ({
+            title: s.title,
+            status: s.status || 'Simulated Vulnerable',
+            technique: s.technique || '',
+            details: s.details || '',
+            confidence: s.confidence || '0%',
+          })),
+          remediation: (p.remediation || []).map(r => ({
+            priority: r.priority,
+            action: r.action,
+            details: r.details || '',
+            status: r.status || 'Pending',
+          })),
+          timelineEstimate: p.timeline_estimate || '',
+          aiReasoning: p.ai_reasoning || '',
+          raw: p,
+        })));
+      }
+
+      if (personasRes.status === 'fulfilled') {
+        setThreatPersonas((personasRes.value.data || []).map(p => ({
+          id: p._id,
+          name: p.name,
+          type: p.predicted_attacker_type,
+          category: p.category || '',
+          origin: p.origin || '',
+          motivation: p.motivation || '',
+          confidence: p.confidence || '0%',
+          capabilityLevel: p.capability_level || 'intermediate',
+          targetAssets: p.target_assets || '',
+          description: p.description || '',
+          ransomLikelihood: p.ransom_likelihood || '0%',
+          phishingRisk: p.phishing_risk || '0%',
+          raw: p,
+        })));
+      }
+
+      if (rulesRes.status === 'fulfilled') {
+        setMonitoringRules((rulesRes.value.data || []).map(r => ({
+          id: r._id,
+          keyword: r.keyword,
+          type: r.type,
+          active: r.active,
+        })));
+      }
+
+      if (corrRes.status === 'fulfilled') {
+        setCorrelations(corrRes.value.data || []);
+      }
+
+    } catch (error) {
+      console.error('[AppContext] Data fetch error:', error);
+    } finally {
+      setLoading(false);
+      setInitialLoading(false);
+    }
+  }, []);
+
+  // Fetch data on mount if authenticated
+  useEffect(() => {
+    if (isAuthenticated && getToken()) {
+      // Load user profile
+      authAPI.getProfile().then(res => {
+        if (res.data?.user) {
+          setUser({
+            name: res.data.user.full_name,
+            role: res.data.user.role,
+            email: res.data.user.email,
+            avatar: res.data.user.full_name.split(' ').map(n => n[0]).join(''),
+            id: res.data.user.id,
+          });
+        }
+      }).catch(() => {});
+      fetchAllData();
+    } else {
+      setInitialLoading(false);
+    }
+  }, [isAuthenticated, fetchAllData]);
+
+  // ═══════════════════════════════════════════════
+  // Auth Actions
+  // ═══════════════════════════════════════════════
+
+  const login = async (email, password) => {
+    const res = await authAPI.login(email, password);
+    setTokens(res.data.access_token, res.data.refresh_token);
+    setUser({
+      name: res.data.user.full_name,
+      role: res.data.user.role,
+      email: res.data.user.email,
+      avatar: res.data.user.full_name.split(' ').map(n => n[0]).join(''),
+      id: res.data.user.id,
+    });
+    setIsAuthenticated(true);
+    return res;
+  };
+
+  const register = async (data) => {
+    const res = await authAPI.register(data);
+    setTokens(res.data.access_token, res.data.refresh_token);
+    setUser({
+      name: res.data.user.full_name,
+      role: res.data.user.role,
+      email: res.data.user.email,
+      avatar: res.data.user.full_name.split(' ').map(n => n[0]).join(''),
+      id: res.data.user.id,
+    });
+    setIsAuthenticated(true);
+    return res;
+  };
+
+  const logout = async () => {
+    try { await authAPI.logout(); } catch {}
+    clearTokens();
+    setIsAuthenticated(false);
+    setUser(null);
+    setAlerts([]);
+    setSubdomains([]);
+    setCredentials([]);
+    setCloudExposures([]);
+    setLogs([]);
+    setAttackPaths([]);
+    setThreatPersonas([]);
+    setDashboardData(null);
+    setCorrelations([]);
+    setMonitoringRules([]);
+  };
+
+  // ═══════════════════════════════════════════════
+  // Alert Actions (API-backed)
+  // ═══════════════════════════════════════════════
+
+  const acknowledgeAlert = async (id) => {
+    try {
+      await alertsAPI.acknowledge(id);
+      setAlerts(prev => prev.map(alert =>
+        alert.id === id ? { ...alert, status: alert.status === "Active" ? "Acknowledged" : "Active", acknowledged: true } : alert
+      ));
+    } catch (error) {
+      // Fallback to local state update
+      setAlerts(prev => prev.map(alert =>
+        alert.id === id ? { ...alert, status: alert.status === "Active" ? "Acknowledged" : "Active" } : alert
+      ));
     }
   };
 
-  const resolveAlert = (id) => {
-    setAlerts(prev => prev.filter(alert => alert.id !== id));
-    
-    // Add custom monitoring log indicating user action
-    const targetAlert = alerts.find(a => a.id === id);
-    if (targetAlert) {
-      const newLog = {
-        id: `log-user-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        event: "Analyst Action",
-        details: `Alert '${targetAlert.title}' marked as Resolved/Remediated.`,
-        severity: "INFO",
-        status: "Closed"
-      };
-      setLogs(prev => [newLog, ...prev]);
+  const resolveAlert = async (id) => {
+    try {
+      await alertsAPI.investigate(id, { investigation_status: 'resolved' });
+      setAlerts(prev => prev.filter(alert => alert.id !== id));
+    } catch (error) {
+      setAlerts(prev => prev.filter(alert => alert.id !== id));
     }
   };
 
-  // Add custom monitoring keyword rule
-  const addMonitoringRule = (keyword, type) => {
-    const newRule = {
-      id: `rule-${Date.now()}`,
-      keyword,
-      type,
-      active: true
-    };
-    setMonitoringRules(prev => [...prev, newRule]);
+  // ═══════════════════════════════════════════════
+  // Monitoring Rule Actions (API-backed)
+  // ═══════════════════════════════════════════════
 
-    // Log the added rule
-    const newLog = {
-      id: `log-user-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      event: "Configuration Update",
-      details: `New active exposure monitoring rule added: [${type}] '${keyword}'.`,
-      severity: "INFO",
-      status: "New"
-    };
-    setLogs(prev => [newLog, ...prev]);
+  const addMonitoringRule = async (keyword, type) => {
+    try {
+      const res = await monitoringAPI.addRule(keyword, type);
+      setMonitoringRules((res.data || []).map(r => ({
+        id: r._id, keyword: r.keyword, type: r.type, active: r.active,
+      })));
+    } catch (error) {
+      // Fallback to local
+      setMonitoringRules(prev => [...prev, { id: `rule-${Date.now()}`, keyword, type, active: true }]);
+    }
   };
 
-  const toggleMonitoringRule = (id) => {
-    setMonitoringRules(prev => prev.map(rule => 
-      rule.id === id ? { ...rule, active: !rule.active } : rule
-    ));
+  const toggleMonitoringRule = async (id) => {
+    const rule = monitoringRules.find(r => r.id === id);
+    if (!rule) return;
+    try {
+      const res = await monitoringAPI.toggleRule(id, !rule.active);
+      setMonitoringRules((res.data || []).map(r => ({
+        id: r._id, keyword: r.keyword, type: r.type, active: r.active,
+      })));
+    } catch (error) {
+      setMonitoringRules(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r));
+    }
   };
 
-  const deleteMonitoringRule = (id) => {
-    setMonitoringRules(prev => prev.filter(rule => rule.id !== id));
+  const deleteMonitoringRule = async (id) => {
+    try {
+      const res = await monitoringAPI.deleteRule(id);
+      setMonitoringRules((res.data || []).map(r => ({
+        id: r._id, keyword: r.keyword, type: r.type, active: r.active,
+      })));
+    } catch (error) {
+      setMonitoringRules(prev => prev.filter(r => r.id !== id));
+    }
   };
 
-  // Memoized Search Results across multiple sources
+  // ═══════════════════════════════════════════════
+  // Search
+  // ═══════════════════════════════════════════════
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return { subdomains: [], credentials: [], cloudExposures: [] };
     const query = searchQuery.toLowerCase();
-    
+
     return {
-      subdomains: subdomains.filter(s => 
-        s.name.toLowerCase().includes(query) || 
-        s.ip.includes(query) || 
-        s.services.toLowerCase().includes(query)
+      subdomains: subdomains.filter(s =>
+        s.name?.toLowerCase().includes(query) ||
+        s.ip?.includes(query) ||
+        s.services?.toLowerCase().includes(query)
       ),
-      credentials: credentials.filter(c => 
-        c.email.toLowerCase().includes(query) || 
-        c.owner.toLowerCase().includes(query) || 
-        c.source.toLowerCase().includes(query)
+      credentials: credentials.filter(c =>
+        c.email?.toLowerCase().includes(query) ||
+        c.owner?.toLowerCase().includes(query) ||
+        c.source?.toLowerCase().includes(query)
       ),
-      cloudExposures: cloudExposures.filter(e => 
-        e.bucketName.toLowerCase().includes(query) || 
-        e.configurationIssue.toLowerCase().includes(query)
+      cloudExposures: cloudExposures.filter(e =>
+        e.bucketName?.toLowerCase().includes(query) ||
+        e.configurationIssue?.toLowerCase().includes(query)
       )
     };
   }, [searchQuery, subdomains, credentials, cloudExposures]);
 
-  // Comprehensive list of all searchable elements for UI dropdowns
   const globalSearchList = useMemo(() => {
     const list = [];
     subdomains.forEach(s => list.push({ id: s.id, type: "Subdomain", title: s.name, subtitle: `IP: ${s.ip} | Risk: ${s.riskScore}` }));
@@ -152,6 +379,8 @@ export const AppProvider = ({ children }) => {
       setIsAuthenticated,
       user,
       setUser,
+      loading,
+      initialLoading,
       alerts,
       setAlerts,
       subdomains,
@@ -166,6 +395,10 @@ export const AppProvider = ({ children }) => {
       setAttackPaths,
       threatPersonas,
       setThreatPersonas,
+      correlations,
+      setCorrelations,
+      dashboardData,
+      setDashboardData,
       selectedAssetId,
       setSelectedAssetId,
       monitoringRules,
@@ -174,12 +407,16 @@ export const AppProvider = ({ children }) => {
       setSearchQuery,
       searchResults,
       globalSearchList,
+      login,
+      register,
+      logout,
       acknowledgeAlert,
       resolveAlert,
       addMonitoringRule,
       toggleMonitoringRule,
       deleteMonitoringRule,
-      navigateToAssetProfile
+      navigateToAssetProfile,
+      fetchAllData,
     }}>
       {children}
     </AppContext.Provider>

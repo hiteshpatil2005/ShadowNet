@@ -13,14 +13,19 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { mockTemplates } from '../data/mockData';
+
+const reportTemplates = [
+  { id: 'temp-1', name: 'Executive Threat Summary', type: 'Executive', desc: 'High-level exposure overview for C-suite and board presentations. Includes risk scores, key findings, and recommended actions.', sections: 4 },
+  { id: 'temp-2', name: 'Technical Vulnerability Audit', type: 'Technical', desc: 'Detailed technical breakdown of exposed assets, open ports, vulnerable services, and attack surface analysis.', sections: 6 },
+  { id: 'temp-3', name: 'Compliance & Regulatory Report', type: 'Compliance', desc: 'Mapped findings against ISO 27001, SOC 2, and NIST CSF frameworks for compliance gap analysis.', sections: 5 },
+];
 
 const Reporting = () => {
   const { subdomains, credentials, cloudExposures } = useApp();
 
   // Selected template state
   const [selectedTempId, setSelectedTempId] = useState('temp-1');
-  const activeTemplate = mockTemplates.find(t => t.id === selectedTempId) || mockTemplates[0];
+  const activeTemplate = reportTemplates.find(t => t.id === selectedTempId) || reportTemplates[0];
 
   // Customizable Section toggles
   const [includeAssets, setIncludeAssets] = useState(true);
@@ -167,7 +172,7 @@ CONFIDENTIAL REPORT. FOR INTERNAL SECOPS USE ONLY.
             </span>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {mockTemplates.map((temp) => (
+              {reportTemplates.map((temp) => (
                 <div
                   key={temp.id}
                   onClick={() => setSelectedTempId(temp.id)}

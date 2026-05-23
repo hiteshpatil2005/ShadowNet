@@ -22,7 +22,6 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { mockInfrastructureGraph } from '../data/mockData';
 
 // Custom Node Component to fit our high-end cyber theme
 const CyberNode = ({ data }) => {
@@ -69,55 +68,114 @@ const CyberNode = ({ data }) => {
 
 const InfrastructureGraph = () => {
   const navigate = useNavigate();
-  const { navigateToAssetProfile } = useApp();
+  const { navigateToAssetProfile, subdomains, cloudExposures, credentials, correlations } = useApp();
   
   // Custom nodes definition mapping
   const nodeTypes = useMemo(() => ({ cyberNode: CyberNode }), []);
 
-  // Map our static mock data to React Flow models
+  // Build React Flow nodes/edges dynamically from real data
   const initialNodes = useMemo(() => {
-    return mockInfrastructureGraph.nodes.map(node => ({
-      id: node.id,
-      type: 'cyberNode',
-      position: { x: node.x, y: node.y },
-      data: { 
-        label: node.label,
-        type: node.type,
-        risk: node.risk,
-        ip: node.ip,
-        details: node.details
-      }
-    }));
-  }, []);
+    const nodes = [];
+    const cols = 4;
+    
+    // Subdomains as nodes
+    subdomains.forEach((s, i) => {
+      nodes.push({
+        id: s.id,
+        type: 'cyberNode',
+        position: { x: 100 + (i % cols) * 280, y: 100 + Math.floor(i / cols) * 200 },
+        data: { label: s.name, type: 'subdomain', risk: s.riskLevel || 'medium', ip: s.ip, details: s.services || '' }
+      });
+    });
+    
+    // Cloud resources
+    cloudExposures.forEach((c, i) => {
+      nodes.push({
+        id: c.id,
+        type: 'cyberNode',
+        position: { x: 100 + ((subdomains.length + i) % cols) * 280, y: 100 + Math.floor((subdomains.length + i) / cols) * 200 },
+        data: { label: c.bucketName, type: 'cloud', risk: c.riskRating?.toLowerCase() || 'high', ip: '', details: c.configurationIssue || '' }
+      });
+    });
+    
+    // Credentials as nodes (only critical/high)
+    credentials.filter(c => c.severity === 'CRITICAL' || c.severity === 'HIGH').slice(0, 6).forEach((c, i) => {
+      nodes.push({
+        id: c.id,
+        type: 'cyberNode',
+        position: { x: 100 + ((subdomains.length + cloudExposures.length + i) % cols) * 280, y: 100 + Math.floor((subdomains.length + cloudExposures.length + i) / cols) * 200 },
+        data: { label: c.email, type: 'credential', risk: c.severity === 'CRITICAL' ? 'critical' : 'high', ip: '', details: `Source: ${c.source}` }
+      });
+    });
+    
+    return nodes;
+  }, [subdomains, cloudExposures, credentials]);
 
   const initialEdges = useMemo(() => {
-    return mockInfrastructureGraph.edges.map(edge => {
-      const isCritical = edge.risk === 'critical';
-      const isHigh = edge.risk === 'high';
-      
-      let edgeColor = '#202b3c'; // default light gray
-      if (isCritical) edgeColor = '#ef4444';
-      else if (isHigh) edgeColor = '#f97316';
-
-      return {
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        labelStyle: { fill: '#94a3b8', fontSize: 8, fontFamily: 'monospace', fontWeight: 'bold' },
-        labelBgPadding: 4,
-        labelBgStyle: { fill: '#06090e', fillOpacity: 0.8 },
-        style: { stroke: edgeColor, strokeWidth: isCritical ? 2.5 : 1.5 },
-        animated: isCritical || isHigh,
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: edgeColor,
-          width: 12,
-          height: 12
-        }
-      };
+    const edges = [];
+    
+    // Shared IP edges
+    const ipMap = {};
+    subdomains.forEach(s => {
+      if (s.ip && s.ip !== 'N/A') {
+        if (!ipMap[s.ip]) ipMap[s.ip] = [];
+        ipMap[s.ip].push(s.id);
+      }
     });
-  }, []);
+    Object.entries(ipMap).forEach(([ip, ids]) => {
+      for (let i = 0; i < ids.length - 1; i++) {
+        edges.push({
+          id: `e-ip-${ids[i]}-${ids[i+1]}`,
+          source: ids[i], target: ids[i+1],
+          label: `shared: ${ip}`,
+          labelStyle: { fill: '#94a3b8', fontSize: 8, fontFamily: 'monospace', fontWeight: 'bold' },
+          labelBgPadding: 4,
+          labelBgStyle: { fill: '#06090e', fillOpacity: 0.8 },
+          style: { stroke: '#8b5cf6', strokeWidth: 1.5, strokeDasharray: '5 5' },
+          animated: true,
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6', width: 12, height: 12 }
+        });
+      }
+    });
+    
+    // Correlation-based edges
+    correlations.forEach(corr => {
+      const sourceNode = subdomains.find(s => s.name === corr.asset_id_1 || s.name === corr.service);
+      const targetNode = subdomains.find(s => s.name === corr.asset_id_2) || 
+                         cloudExposures.find(c => c.bucketName === corr.asset_id_2);
+      const credNode = credentials.find(c => c.email === corr.credential);
+      
+      if (sourceNode && targetNode) {
+        const isCrit = corr.severity === 'CRITICAL';
+        edges.push({
+          id: `e-corr-${corr._id || Math.random()}`,
+          source: sourceNode.id, target: targetNode.id,
+          label: corr.correlation_type?.replace(/_/g, ' ') || 'correlated',
+          labelStyle: { fill: '#94a3b8', fontSize: 8, fontFamily: 'monospace', fontWeight: 'bold' },
+          labelBgPadding: 4,
+          labelBgStyle: { fill: '#06090e', fillOpacity: 0.8 },
+          style: { stroke: isCrit ? '#ef4444' : '#f97316', strokeWidth: isCrit ? 2.5 : 1.5 },
+          animated: isCrit,
+          markerEnd: { type: MarkerType.ArrowClosed, color: isCrit ? '#ef4444' : '#f97316', width: 12, height: 12 }
+        });
+      }
+      if (sourceNode && credNode) {
+        edges.push({
+          id: `e-cred-${corr._id || Math.random()}`,
+          source: sourceNode.id, target: credNode.id,
+          label: 'credential link',
+          labelStyle: { fill: '#94a3b8', fontSize: 8, fontFamily: 'monospace', fontWeight: 'bold' },
+          labelBgPadding: 4,
+          labelBgStyle: { fill: '#06090e', fillOpacity: 0.8 },
+          style: { stroke: '#ef4444', strokeWidth: 2 },
+          animated: true,
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#ef4444', width: 12, height: 12 }
+        });
+      }
+    });
+    
+    return edges;
+  }, [subdomains, cloudExposures, credentials, correlations]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -126,8 +184,7 @@ const InfrastructureGraph = () => {
   const [activeNode, setActiveNode] = useState(null);
 
   const onNodeClick = useCallback((event, node) => {
-    const originalNode = mockInfrastructureGraph.nodes.find(n => n.id === node.id);
-    setActiveNode(originalNode);
+    setActiveNode({ id: node.id, ...node.data });
   }, []);
 
   const handlePivot = () => {

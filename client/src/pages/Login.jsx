@@ -12,7 +12,7 @@ import {
 import { useApp } from '../context/AppContext';
 
 const Login = () => {
-  const { setIsAuthenticated, setUser } = useApp();
+  const { login, register } = useApp();
   
   // Toggle registration state modes
   const [isRegistering, setIsRegistering] = useState(false);
@@ -20,7 +20,7 @@ const Login = () => {
   
   // Login input states
   const [username, setUsername] = useState('analyst@shadownet.ai');
-  const [password, setPassword] = useState('••••••••••••');
+  const [password, setPassword] = useState('ShadowNet2026!');
   
   // Registration input states
   const [regName, setRegName] = useState('');
@@ -58,17 +58,18 @@ const Login = () => {
     return () => clearInterval(interval);
   }, [registrationStep, scanProgress]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Simulate threat registry loading sequences
-    setTimeout(() => {
+    try {
+      await login(username, password);
+    } catch (err) {
+      setError(err.message || 'Authentication failed. Check credentials.');
+    } finally {
       setLoading(false);
-      // Login with default or custom registered credentials
-      setIsAuthenticated(true);
-    }, 1200);
+    }
   };
 
   const handleRegisterSubmit = (e) => {
@@ -77,22 +78,29 @@ const Login = () => {
       setError('Please populate all credential vectors.');
       return;
     }
+    if (regPassword.length < 6) {
+      setError('Passphrase must be at least 6 characters.');
+      return;
+    }
     setError('');
     setRegistrationStep(2); // Go to Biometric Scan screen
   };
 
-  const handleCompleteHandshake = () => {
+  const handleCompleteHandshake = async () => {
     setLoading(true);
-    setTimeout(() => {
-      // Set global user in context
-      setUser({
-        name: regName,
-        role: regRole,
-        avatar: regName.split(' ').map(n => n[0]).join('').toUpperCase()
+    try {
+      await register({
+        email: regEmail,
+        password: regPassword,
+        full_name: regName,
+        organization_name: 'ShadowNet AI Inc.',
       });
+    } catch (err) {
+      setError(err.message || 'Registration failed.');
+      setRegistrationStep(1);
+    } finally {
       setLoading(false);
-      setIsAuthenticated(true);
-    }, 1000);
+    }
   };
 
   const toggleMode = () => {

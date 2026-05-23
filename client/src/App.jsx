@@ -14,7 +14,18 @@ import Reporting from './pages/Reporting';
 import Login from './pages/Login';
 
 const MainLayout = () => {
-  const { isAuthenticated } = useApp();
+  const { isAuthenticated, initialLoading } = useApp();
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-screen bg-cyber-black flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-2 border-neon-blue border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-mono text-neon-blue uppercase tracking-widest animate-pulse">Initializing Threat Intelligence...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Login />;

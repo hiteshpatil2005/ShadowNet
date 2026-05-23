@@ -2,49 +2,48 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cpu, ShieldAlert, AlertTriangle, ArrowRight, Activity, Percent, Layers, ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { mockCorrelations } from '../data/mockData';
 
 const ExposureCorrelation = () => {
   const navigate = useNavigate();
-  const { navigateToAssetProfile } = useApp();
+  const { navigateToAssetProfile, subdomains, credentials, correlations } = useApp();
   
   // Matrix hover highlight state
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  // Correlation Matrix Headers
-  const services = [
-    { name: 'vpn.shadownet-ai.com', id: 'sub-2' },
-    { name: 'api-dev.shadownet-ai.com', id: 'sub-3' },
-    { name: 'staging.shadownet-ai.com', id: 'sub-4' },
-    { name: 'mail.shadownet-ai.com', id: 'sub-5' },
-    { name: 'gitlab.shadownet-ai.com', id: 'sub-7' }
-  ];
+  // Build matrix headers dynamically from real data
+  const services = subdomains.filter(s => s.riskLevel === 'critical' || s.riskLevel === 'high').slice(0, 6).map(s => ({
+    name: s.name, id: s.id
+  }));
 
-  const vectors = [
-    { name: 'Sarah Jenkins (Admin Plaintext)', id: 'cred-1', type: 'Credential' },
-    { name: 'Hitesh Patil (Dev Bcrypt Leaked)', id: 'cred-2', type: 'Credential' },
-    { name: 'Exchange ProxyShell CVE-2021-34473', id: 'cve-1', type: 'Vulnerability' },
-    { name: 'Jenkins Arbitrary File Read CVE-2024-23897', id: 'cve-2', type: 'Vulnerability' }
-  ];
+  const vectors = credentials.filter(c => c.severity === 'CRITICAL' || c.severity === 'HIGH').slice(0, 5).map(c => ({
+    name: `${c.owner} (${c.source})`, id: c.id, type: 'Credential'
+  }));
 
-  // Static matrix threat intersection mapping
+  // Dynamic matrix threat intersection: check if a correlation exists linking the service and credential
   const getMatrixThreat = (serviceId, vectorId) => {
-    // admin + vpn
-    if (serviceId === 'sub-2' && vectorId === 'cred-1') return { severity: 'CRITICAL', score: 98, desc: 'Admin login via VPN with leaked plaintext credentials.' };
-    // dev + jenkins
-    if (serviceId === 'sub-3' && vectorId === 'cred-2') return { severity: 'CRITICAL', score: 92, desc: 'DevOps account access on exposed CI/CD endpoint.' };
-    // dev + gitlab
-    if (serviceId === 'sub-7' && vectorId === 'cred-2') return { severity: 'CRITICAL', score: 94, desc: 'GitLab account hijack using verified leaked crypt keys.' };
-    // proxyshell + mail
-    if (serviceId === 'sub-5' && vectorId === 'cve-1') return { severity: 'HIGH', score: 82, desc: 'Active Exchange RCE payload delivery via proxy paths.' };
-    // file read + jenkins
-    if (serviceId === 'sub-3' && vectorId === 'cve-2') return { severity: 'HIGH', score: 88, desc: 'Jenkins environment properties leak leading to AWS token compromise.' };
-    
-    // Low risk or unrelated intersections
-    if (serviceId === 'sub-4' && vectorId === 'cred-2') return { severity: 'MEDIUM', score: 55, desc: 'Dev DevOps account credentials used on sandbox staging.' };
-    if (serviceId === 'sub-2' && vectorId === 'cve-2') return { severity: 'LOW', score: 20, desc: 'Vulnerability scan signature matched, but filtered by firewall.' };
+    const service = subdomains.find(s => s.id === serviceId);
+    const cred = credentials.find(c => c.id === vectorId);
+    if (!service || !cred) return null;
 
-    return null; // Empty intersection
+    // Find matching correlation
+    const corr = correlations.find(c =>
+      (c.service === service.name || c.asset_id_1 === service.name || c.asset_id_2 === service.name) &&
+      (c.credential?.includes(cred.email?.split('@')[0]) || c.title?.toLowerCase().includes(cred.email?.split('@')[0]?.toLowerCase()))
+    );
+
+    if (corr) {
+      return { severity: corr.severity, score: corr.risk_score, desc: corr.description || corr.explanation };
+    }
+
+    // Heuristic: if same org domain in both service and credential email
+    const serviceDomain = service.name.split('.').slice(-2).join('.');
+    if (cred.email?.includes(serviceDomain)) {
+      const score = Math.min(85, (service.riskScore || 50) + (cred.exposureCount || 1) * 10);
+      const severity = score >= 80 ? 'CRITICAL' : score >= 60 ? 'HIGH' : 'MEDIUM';
+      return { severity, score, desc: `Leaked credentials for ${cred.email} could be used against ${service.name}.` };
+    }
+
+    return null;
   };
 
   const getHeatmapColor = (threat) => {
@@ -188,10 +187,12 @@ const ExposureCorrelation = () => {
             </div>
 
             <div className="space-y-3">
-              {mockCorrelations.relationships.map((rel, idx) => (
-                <div key={idx} className="p-4 rounded-lg bg-cyber-black border border-red-950/40 border-l-2 border-l-red-500 space-y-2">
+              {correlations.length > 0 ? [...correlations].sort((a, b) => (b.risk_score || 0) - (a.risk_score || 0)).slice(0, 6).map((rel, idx) => (
+                <div key={rel._id || idx} className={`p-4 rounded-lg bg-cyber-black border border-l-2 space-y-2 ${
+                  rel.severity === 'CRITICAL' ? 'border-red-950/40 border-l-red-500' : rel.severity === 'HIGH' ? 'border-orange-950/40 border-l-orange-500' : 'border-blue-950/40 border-l-blue-500'
+                }`}>
                   <div className="flex items-center justify-between text-[10px] font-mono">
-                    <span className="font-bold text-red-400 uppercase">{rel.severity} RISK</span>
+                    <span className={`font-bold uppercase ${rel.severity === 'CRITICAL' ? 'text-red-400' : rel.severity === 'HIGH' ? 'text-orange-400' : 'text-blue-400'}`}>{rel.severity} RISK</span>
                     <span className="text-cyber-text-secondary flex items-center gap-1">
                       <Percent className="w-3.5 h-3.5 text-red-400" />
                       <span>{rel.confidence} Confidence</span>
@@ -199,13 +200,15 @@ const ExposureCorrelation = () => {
                   </div>
                   <h3 className="text-xs font-bold text-cyber-text-primary tracking-wide leading-snug">{rel.title}</h3>
                   <p className="text-[11px] text-cyber-text-secondary leading-relaxed">{rel.description}</p>
-                  <div className="text-[10px] p-2 bg-red-950/20 text-red-300 rounded border border-red-950/40 mt-2 leading-relaxed">
-                    <span className="font-bold font-mono">Impact: </span>{rel.impact}
-                  </div>
+                  {(rel.impact || rel.explanation) && (
+                    <div className="text-[10px] p-2 bg-red-950/20 text-red-300 rounded border border-red-950/40 mt-2 leading-relaxed">
+                      <span className="font-bold font-mono">Impact: </span>{rel.impact || rel.explanation}
+                    </div>
+                  )}
                   
                   <div className="flex justify-end pt-2">
                     <button
-                      onClick={() => handlePivot(idx === 0 ? "sub-2" : "sub-3")}
+                      onClick={() => handlePivot(subdomains[0]?.id)}
                       className="px-2.5 py-1 cursor-pointer rounded bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/30 text-[9px] font-bold font-mono flex items-center gap-1 transition-colors"
                     >
                       <span>Remediate Pathway</span>
@@ -213,7 +216,13 @@ const ExposureCorrelation = () => {
                     </button>
                   </div>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center py-8 border border-dashed border-cyber-light/20 rounded-lg">
+                  <Activity className="w-8 h-8 text-orange-400/30 mx-auto mb-2" />
+                  <p className="text-[10px] text-cyber-text-secondary font-mono">No correlations detected yet.</p>
+                  <p className="text-[9px] text-cyber-text-secondary/60 font-mono mt-1">Data will populate after correlation analysis runs.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
