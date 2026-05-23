@@ -21,6 +21,8 @@ import reportRoutes from './routes/reports.js';
 import infrastructureRoutes from './routes/infrastructure.js';
 import adminRoutes from './routes/admin.js';
 import tiRoutes from './routes/ti.js';
+import searchRoutes from './routes/search.js';
+import { startScanScheduler } from './services/scanScheduler.js';
 
 const app = express();
 
@@ -47,6 +49,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/infrastructure', infrastructureRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ti', tiRoutes);
+app.use('/api/search', searchRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -64,11 +67,13 @@ app.use((req, res) => {
 // Start server
 const start = async () => {
   await connectDB();
+  startScanScheduler();
   app.listen(env.PORT, () => {
     console.log(`\n🛡️  ShadowNet AI Backend running on port ${env.PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   API Base: http://localhost:${env.PORT}/api`);
-    console.log(`   Health: http://localhost:${env.PORT}/api/health\n`);
+    console.log(`   Health: http://localhost:${env.PORT}/api/health`);
+    console.log(`   Continuous TI scanning: enabled\n`);
   });
 };
 

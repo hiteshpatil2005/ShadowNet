@@ -22,6 +22,7 @@ export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [lastSyncAt, setLastSyncAt] = useState(null);
 
   // Core Data States
   const [alerts, setAlerts] = useState([]);
@@ -215,6 +216,7 @@ export const AppProvider = ({ children }) => {
     } finally {
       setLoading(false);
       setInitialLoading(false);
+      setLastSyncAt(new Date());
     }
   }, []);
 
@@ -237,6 +239,16 @@ export const AppProvider = ({ children }) => {
     } else {
       setInitialLoading(false);
     }
+  }, [isAuthenticated, fetchAllData]);
+
+  // Poll API for new scan results / alerts (continuous monitoring refresh)
+  useEffect(() => {
+    if (!isAuthenticated || !getToken()) return;
+    const pollMs = 90000;
+    const id = setInterval(() => {
+      if (!document.hidden) fetchAllData();
+    }, pollMs);
+    return () => clearInterval(id);
   }, [isAuthenticated, fetchAllData]);
 
   // ═══════════════════════════════════════════════
@@ -402,6 +414,7 @@ export const AppProvider = ({ children }) => {
       setUser,
       loading,
       initialLoading,
+      lastSyncAt,
       alerts,
       setAlerts,
       subdomains,

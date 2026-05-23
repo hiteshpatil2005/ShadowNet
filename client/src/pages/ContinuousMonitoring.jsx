@@ -1,15 +1,59 @@
-import React, { useState } from 'react';
-import { Eye, Bell, Activity, Plus, Trash2, ShieldCheck, ToggleLeft, ToggleRight, Radio, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Eye, Bell, Plus, Trash2, ToggleLeft, ToggleRight, Radio, RefreshCw, Target, Play } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { monitoringAPI } from '../services/api';
 
 const ContinuousMonitoring = () => {
-  const { 
-    logs, 
-    monitoringRules, 
-    addMonitoringRule, 
-    toggleMonitoringRule, 
-    deleteMonitoringRule 
+  const {
+    logs,
+    monitoringRules,
+    addMonitoringRule,
+    toggleMonitoringRule,
+    deleteMonitoringRule,
+    fetchAllData,
+    loading,
   } = useApp();
+
+  const [scanTargets, setScanTargets] = useState([]);
+  const [newTarget, setNewTarget] = useState('');
+  const [scanMeta, setScanMeta] = useState(null);
+  const [scanRunning, setScanRunning] = useState(false);
+
+  const loadTargets = async () => {
+    try {
+      const res = await monitoringAPI.getTargets();
+      setScanTargets(res.data?.targets || []);
+      setScanMeta(res.data);
+    } catch {}
+  };
+
+  useEffect(() => {
+    loadTargets();
+  }, []);
+
+  const handleAddTarget = async (e) => {
+    e.preventDefault();
+    if (!newTarget.trim()) return;
+    await monitoringAPI.addTarget(newTarget.trim());
+    setNewTarget('');
+    await loadTargets();
+  };
+
+  const handleDeleteTarget = async (id) => {
+    await monitoringAPI.deleteTarget(id);
+    await loadTargets();
+  };
+
+  const handleRunScan = async () => {
+    setScanRunning(true);
+    try {
+      await monitoringAPI.runScan();
+      await fetchAllData();
+      await loadTargets();
+    } finally {
+      setScanRunning(false);
+    }
+  };
 
   // Add rule inputs
   const [newKeyword, setNewKeyword] = useState('');
@@ -51,8 +95,57 @@ const ContinuousMonitoring = () => {
           <span>Continuous Exposure Monitoring Portal</span>
         </h1>
         <p className="text-xs text-cyber-text-secondary leading-relaxed">
-          Configuring intelligence trigger engines to watch paste sites, public storage repositories, and domain registers for corporate data leaks in real-time.
+          Add domains or IPs for continuous TI scanning. Results are stored in MongoDB and appear across the platform.
         </p>
+      </div>
+
+      <div className="bg-cyber-dark border border-neon-blue/30 rounded-xl p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xs font-bold text-neon-blue uppercase tracking-wider flex items-center gap-2">
+              <Target className="w-4 h-4" />
+              Continuous scan targets
+            </h2>
+            <p className="text-[10px] text-cyber-text-secondary mt-1 font-mono">
+              Last scan: {scanMeta?.last_scan_at ? new Date(scanMeta.last_scan_at).toLocaleString() : 'Never'} • Status: {scanMeta?.last_scan_status || 'idle'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleRunScan}
+            disabled={scanRunning || scanTargets.length === 0}
+            className="px-4 py-2 bg-neon-blue text-cyber-black font-bold text-xs uppercase rounded-lg disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+          >
+            <Play className="w-4 h-4" />
+            {scanRunning ? 'Scanning…' : 'Run scan now'}
+          </button>
+        </div>
+        <form onSubmit={handleAddTarget} className="flex gap-2">
+          <input
+            type="text"
+            value={newTarget}
+            onChange={(e) => setNewTarget(e.target.value)}
+            placeholder="example.com or 1.2.3.4"
+            className="flex-1 h-9 px-3 bg-cyber-black border border-cyber-light/60 rounded-lg text-xs font-mono text-cyber-text-primary focus:border-neon-blue focus:outline-none"
+          />
+          <button type="submit" className="px-4 h-9 bg-cyber-gray border border-cyber-light/60 rounded-lg text-xs font-bold text-neon-blue cursor-pointer">
+            Add target
+          </button>
+        </form>
+        <div className="flex flex-wrap gap-2">
+          {scanTargets.map((t) => (
+            <span key={t._id} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-cyber-black border border-cyber-light/40 text-[10px] font-mono">
+              <span className="text-cyan-400">{t.type}</span>
+              <span className="text-cyber-text-primary">{t.target}</span>
+              <button type="button" onClick={() => handleDeleteTarget(t._id)} className="text-red-400 hover:text-red-300 cursor-pointer">
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          {scanTargets.length === 0 && (
+            <p className="text-[10px] text-cyber-text-secondary font-mono">No targets — add a domain or IP to start continuous scanning.</p>
+          )}
+        </div>
       </div>
 
       {/* Grid Layout */}
@@ -66,7 +159,7 @@ const ContinuousMonitoring = () => {
                 <Radio className="w-4 h-4 text-red-500 animate-ping" />
                 <span>Live Intelligence Telemetry Stream</span>
               </span>
-              <p className="text-[10px] text-cyber-text-secondary">Direct polling feed from ShadowNet scraper hubs.</p>
+              <p className="text-[10px] text-cyber-text-secondary">Alerts from TI scans (refreshes every ~90s).</p>
             </div>
 
             {/* Severity selection */}

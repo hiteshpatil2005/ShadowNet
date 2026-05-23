@@ -61,16 +61,16 @@ JWT_REFRESH_SECRET=another-long-random-string
 
 Optional: add `GEMINI_API_KEY` and other TI keys (see [Free API keys](#free-api-keys-optional)).
 
-### Step 4 — Load demo data
+### Step 4 — Initialize database (no fake data)
 
 ```bash
 cd server
 npm run seed
 ```
 
-You should see `[SEED] ✅ Database seeded successfully!`
+Creates login only — **no fake assets**. Optional fictional demo: `npm run seed:demo`
 
-**Demo login** (use this after seeding):
+**Login** (after seed):
 
 | | |
 |---|---|
@@ -123,10 +123,24 @@ npm run dev
 | **Asset Profile** | Opens when you pivot from footprint/graph/search. Shows metadata, CVE info (from NVD if CVE in services), RIPEstat for IPs. Use the **notepad** to save analyst notes locally. |
 | **Reporting** | Choose a template, toggle sections, **Generate report** → downloads a text report from current data. |
 
-### Header (top bar)
+### Header (top bar) — live IP / domain investigation
 
-- **Global search** — type domain, IP, or email; select a result to jump to **Asset Profile**
-- **Alerts bell** — quick view of critical items
+- Type an **IPv4 address** (e.g. `8.8.8.8`) or **domain** (e.g. `google.com`)
+- ShadowNet calls **AbuseIPDB, RIPEstat, VirusTotal, crt.sh**, etc. (based on your API keys)
+- Results appear in the dropdown and are **saved to your inventory**
+- Press Enter or wait ~1s after typing for auto-investigate
+
+### Continuous scanning (Monitoring page)
+
+1. Open **Continuous Monitoring**
+2. Under **Continuous scan targets**, add domains/IPs you are authorized to scan
+3. Click **Run scan now** (or wait for the hourly scheduler on the server)
+4. New assets and alerts appear in **Digital Footprint** and the alert stream
+
+### Header (other)
+
+- **Sync** button — refresh all data from MongoDB (~90s auto-refresh)
+- **Alerts bell** — critical alert count
 
 ### Registering a new user
 

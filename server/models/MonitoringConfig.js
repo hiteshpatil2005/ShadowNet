@@ -6,10 +6,22 @@ const alertRuleSchema = new mongoose.Schema({
   active: { type: Boolean, default: true },
 }, { _id: true });
 
+const scanTargetSchema = new mongoose.Schema({
+  target: { type: String, required: true },
+  type: { type: String, enum: ['domain', 'ip'], default: 'domain' },
+  active: { type: Boolean, default: true },
+  last_scanned: { type: Date },
+}, { _id: true });
+
 const monitoringConfigSchema = new mongoose.Schema({
   organization_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true, unique: true },
   monitoring_enabled: { type: Boolean, default: true },
   scan_interval: { type: Number, default: 24 },
+  scan_interval_hours: { type: Number, default: 1 },
+  scan_targets: [scanTargetSchema],
+  last_scan_at: { type: Date },
+  last_scan_status: { type: String, default: 'idle' },
+  last_scan_results: { type: mongoose.Schema.Types.Mixed, default: [] },
   ti_sources_enabled: [{ type: String }],
   alert_rules: [alertRuleSchema],
   notification_channels: {

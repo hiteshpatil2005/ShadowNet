@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import DigitalAsset from '../models/DigitalAsset.js';
 import tiOrchestrator from '../services/ti/index.js';
+import { ingestEnrichment } from '../services/scanIngestion.js';
+import { normalizeTarget } from '../utils/targetDetect.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -35,14 +37,17 @@ router.post('/scan', authenticate, async (req, res, next) => {
     activeScans.set(scanId, { status: 'running', progress: 0, started_at: new Date(), results: [] });
 
     // Run scan asynchronously
+    const orgId = req.organizationId;
     (async () => {
       try {
         const scan = activeScans.get(scanId);
-        const targetList = Array.isArray(targets) ? targets : [targets];
+        const targetList = (Array.isArray(targets) ? targets : [targets]).map(normalizeTarget).filter(Boolean);
         for (let i = 0; i < targetList.length; i++) {
           const target = targetList[i];
-          const enrichment = await tiOrchestrator.fullScan([target]);
-          scan.results.push(...enrichment);
+          const batch = await tiOrchestrator.fullScan([target]);
+          const row = batch[0] || { target, type: 'domain' };
+          const ingested = await ingestEnrichment(orgId, target, row);
+          scan.results.push({ target, enrichment, ingested });
           scan.progress = Math.round(((i + 1) / targetList.length) * 100);
         }
         scan.status = 'completed';

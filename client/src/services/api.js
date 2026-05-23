@@ -179,6 +179,10 @@ export const monitoringAPI = {
   addRule: (keyword, type) => apiFetch('/monitoring/rules', { method: 'POST', body: JSON.stringify({ keyword, type }) }),
   toggleRule: (id, active) => apiFetch(`/monitoring/rules/${id}`, { method: 'PUT', body: JSON.stringify({ active }) }),
   deleteRule: (id) => apiFetch(`/monitoring/rules/${id}`, { method: 'DELETE' }),
+  getTargets: () => apiFetch('/monitoring/targets'),
+  addTarget: (target, type) => apiFetch('/monitoring/targets', { method: 'POST', body: JSON.stringify({ target, type }) }),
+  deleteTarget: (id) => apiFetch(`/monitoring/targets/${id}`, { method: 'DELETE' }),
+  runScan: () => apiFetch('/monitoring/scan/run', { method: 'POST' }),
 };
 
 // ═══════════════════════════════════════════════
@@ -198,6 +202,13 @@ export const infrastructureAPI = {
   getGraph: () => apiFetch('/infrastructure/graph'),
   searchGraph: (q) => apiFetch(`/infrastructure/graph/search?q=${encodeURIComponent(q)}`),
   getRelationships: () => apiFetch('/infrastructure/relationships'),
+};
+
+// ═══════════════════════════════════════════════
+// Search / Investigate API
+// ═══════════════════════════════════════════════
+export const searchAPI = {
+  investigate: (q) => apiFetch(`/search/investigate?q=${encodeURIComponent(q)}`),
 };
 
 // ═══════════════════════════════════════════════

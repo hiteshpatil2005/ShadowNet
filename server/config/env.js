@@ -24,6 +24,11 @@ const env = {
 
   // Free TI additions
   NVD_API_KEY: process.env.NVD_API_KEY || '',
+
+  // Continuous scanning (minutes between scheduler checks; per-org interval in monitoring config)
+  SCAN_INTERVAL_MINUTES: parseInt(process.env.SCAN_INTERVAL_MINUTES || '15', 10),
+  SCAN_POLL_MS: parseInt(process.env.SCAN_POLL_MS || '60000', 10),
+  CLIENT_POLL_MS: parseInt(process.env.CLIENT_POLL_MS || '90000', 10),
 };
 
 export default env;

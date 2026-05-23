@@ -197,7 +197,7 @@ const DigitalFootprint = () => {
           <AlertTriangle className="w-5 h-5 shrink-0 text-amber-400" />
           <div className="space-y-2">
             <p className="font-bold text-amber-300">No footprint data loaded</p>
-            <p>Run <code className="text-neon-blue">npm run seed</code> in the <code>server</code> folder, then log in as <strong>analyst@shadownet.ai</strong> / <strong>ShadowNet2026!</strong> and click Refresh.</p>
+            <p>Search an <strong>IP or domain</strong> in the header, or add scan targets under <strong>Monitoring</strong> and click <strong>Run scan now</strong>. Configure TI API keys in <code>server/.env</code>.</p>
           </div>
         </div>
       )}

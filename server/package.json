@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "seed": "node seed/seedData.js"
+    "seed": "node seed/seedMinimal.js",
+    "seed:demo": "node seed/seedData.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
