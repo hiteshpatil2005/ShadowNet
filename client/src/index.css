@@ -1,1 +1,124 @@
 @import "tailwindcss";
+
+@theme {
+  --color-cyber-black: #06090e;
+  --color-cyber-dark: #0b0f17;
+  --color-cyber-gray: #151c28;
+  --color-cyber-light: #202b3c;
+  --color-neon-blue: #00f0ff;
+  --color-neon-purple: #bd00ff;
+  --color-severity-critical: #ef4444;
+  --color-severity-high: #f97316;
+  --color-severity-medium: #3b82f6;
+  --color-severity-low: #10b981;
+  --color-cyber-text-primary: #f8fafc;
+  --color-cyber-text-secondary: #94a3b8;
+  
+  --font-mono: "Fira Code", "Courier New", Courier, monospace;
+}
+
+/* Base style custom overrides */
+@layer base {
+  body {
+    background-color: var(--color-cyber-black);
+    color: var(--color-cyber-text-primary);
+    font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-cyber-black);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-cyber-light);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neon-blue);
+}
+
+/* Digital Grid Background */
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-position: center;
+}
+
+/* Futuristic Scanline Effect */
+.cyber-scanlines {
+  position: relative;
+  overflow: hidden;
+}
+.cyber-scanlines::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 2;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.25);
+}
+.glow-purple {
+  box-shadow: 0 0 15px rgba(189, 0, 255, 0.25);
+}
+.glow-critical {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.25);
+}
+
+/* Pulsing text */
+.pulse-text {
+  animation: textPulse 2s infinite ease-in-out;
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 0.8;
+    text-shadow: 0 0 4px rgba(0, 240, 255, 0.4);
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
+  }
+}
+
+/* React Flow styling fixes for dark mode */
+.react-flow__renderer {
+  background-color: var(--color-cyber-dark) !important;
+}
+.react-flow__node {
+  border-radius: 6px !important;
+  color: var(--color-cyber-text-primary) !important;
+}
+.react-flow__handle {
+  background: var(--color-neon-blue) !important;
+  border: 1px solid var(--color-cyber-black) !important;
+}
+.react-flow__edge-path {
+  stroke-width: 2 !important;
+}
+.react-flow__controls button {
+  background: var(--color-cyber-gray) !important;
+  border-bottom: 1px solid var(--color-cyber-light) !important;
+  color: var(--color-neon-blue) !important;
+  fill: var(--color-neon-blue) !important;
+}
+.react-flow__controls button:hover {
+  background: var(--color-cyber-light) !important;
+}
+.react-flow__attribution {
+  display: none !important;
+}
