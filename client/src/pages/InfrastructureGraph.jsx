@@ -18,7 +18,8 @@ import {
   ShieldAlert, 
   Info,
   Maximize2,
-  RefreshCw
+  RefreshCw,
+  ArrowRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { mockInfrastructureGraph } from '../data/mockData';
