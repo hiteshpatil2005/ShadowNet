@@ -15,6 +15,8 @@ const RATE_LIMITS = {
   openphish: { maxTokens: 10, refillRate: 10, interval: 60000 },       // 10/min
   phishtank: { maxTokens: 10, refillRate: 10, interval: 60000 },       // 10/min
   hybridanalysis: { maxTokens: 10, refillRate: 10, interval: 60000 },  // 10/min
+  nvd: { maxTokens: 5, refillRate: 5, interval: 30000 },              // 5 per 30s (NVD public limit)
+  ripestat: { maxTokens: 20, refillRate: 20, interval: 60000 },        // public API
 };
 
 const getBucket = (source) => {

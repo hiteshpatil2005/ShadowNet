@@ -13,14 +13,56 @@ import {
   RotateCw
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { attackPathsAPI } from '../services/api';
 
 const AttackPathSimulation = () => {
   const navigate = useNavigate();
-  const { attackPaths, threatPersonas, navigateToAssetProfile } = useApp();
+  const { attackPaths, setAttackPaths, threatPersonas, navigateToAssetProfile, subdomains, fetchAllData } = useApp();
   
   // Scenario Selection
   const [selectedScenarioIdx, setSelectedScenarioIdx] = useState(0);
+  const [simulating, setSimulating] = useState(false);
   const activePath = attackPaths[selectedScenarioIdx];
+
+  const handleRunSimulation = async () => {
+    setSimulating(true);
+    try {
+      const res = await attackPathsAPI.simulate();
+      const paths = (res.data || []).map(p => ({
+        id: p._id,
+        name: p.name,
+        type: p.attack_scenario_type,
+        probability: p.probability || '0%',
+        impact: p.impact || 'HIGH',
+        stages: (p.stages || []).map(s => ({
+          title: s.title,
+          status: s.status || 'Simulated Vulnerable',
+          technique: s.technique || '',
+          details: s.details || '',
+          confidence: s.confidence || '0%',
+        })),
+        remediation: (p.remediation || []).map(r => ({
+          priority: r.priority,
+          action: r.action,
+          details: r.details || '',
+          status: r.status || 'Pending',
+        })),
+        timelineEstimate: p.timeline_estimate || '',
+        aiReasoning: p.ai_reasoning || '',
+        raw: p,
+      }));
+      if (paths.length) {
+        setAttackPaths(prev => [...paths, ...prev]);
+        setSelectedScenarioIdx(0);
+      } else {
+        await fetchAllData();
+      }
+    } catch {
+      await fetchAllData();
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   // Interactive checklist state
   const [completedTasks, setCompletedTasks] = useState({});
@@ -33,14 +75,31 @@ const AttackPathSimulation = () => {
   };
 
   const handlePersonaPivot = () => {
-    // Navigate to asset vpn or api
-    if (selectedScenarioIdx === 0) {
-      navigateToAssetProfile("sub-2");
-    } else {
-      navigateToAssetProfile("sub-3");
+    const critical = subdomains.find(s => s.riskLevel === 'critical') || subdomains[0];
+    if (critical?.id) {
+      navigateToAssetProfile(critical.id);
+      navigate('/asset-profile');
     }
-    navigate('/asset-profile');
   };
+
+  if (!activePath) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-cyber-dark/80 border border-cyber-light/40 rounded-xl p-6 space-y-4 text-center">
+          <h1 className="text-xl font-bold text-cyber-text-primary uppercase">Attack Path Simulator</h1>
+          <p className="text-xs text-cyber-text-secondary">No attack paths in the database yet. Seed demo data or run a new AI simulation.</p>
+          <button
+            type="button"
+            onClick={handleRunSimulation}
+            disabled={simulating}
+            className="mx-auto px-4 py-2 bg-neon-blue text-cyber-black font-bold text-xs uppercase rounded-lg disabled:opacity-50"
+          >
+            {simulating ? 'Simulating…' : 'Run AI Simulation'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -54,6 +113,14 @@ const AttackPathSimulation = () => {
         <p className="text-xs text-cyber-text-secondary leading-relaxed">
           ShadowNet AI uses deep exposure metrics to simulate attacker decision-trees and predict active attack paths before exploitation.
         </p>
+        <button
+          type="button"
+          onClick={handleRunSimulation}
+          disabled={simulating}
+          className="mt-2 px-3 py-1.5 text-[10px] font-bold uppercase border border-neon-blue/50 text-neon-blue rounded hover:bg-neon-blue/10 disabled:opacity-50"
+        >
+          {simulating ? 'Running simulation…' : 'Generate new paths'}
+        </button>
       </div>
 
       {/* Selector and Main Dashboard Layout */}

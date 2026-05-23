@@ -13,7 +13,7 @@ router.get('/config', authenticate, async (req, res, next) => {
         organization_id: req.organizationId,
         monitoring_enabled: true,
         scan_interval: 24,
-        ti_sources_enabled: ['alienvault', 'abuseipdb', 'virustotal', 'crtsh', 'urlscan'],
+        ti_sources_enabled: ['alienvault', 'abuseipdb', 'virustotal', 'crtsh', 'urlscan', 'nvd', 'ripestat'],
         alert_rules: [],
       });
     }

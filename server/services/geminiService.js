@@ -59,6 +59,7 @@ Respond in JSON format:
   ]
 }`);
 
+  if (Array.isArray(result)) return result;
   if (result?.attack_paths) return result.attack_paths;
   return getFallbackAttackPaths();
 };
@@ -112,6 +113,7 @@ Respond in JSON:
   ]
 }`);
 
+  if (Array.isArray(result)) return result;
   if (result?.personas) return result.personas;
   return getFallbackPersonas();
 };

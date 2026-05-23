@@ -7,6 +7,10 @@ const connectDB = async () => {
     console.log(`[DB] MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
   } catch (error) {
     console.error(`[DB] MongoDB connection error: ${error.message}`);
+    if (env.MONGO_URI?.includes('mongodb.net')) {
+      console.error('[DB] Atlas tips: check MONGO_URI user/password, database name "shadownet", and Network Access IP whitelist.');
+      console.error('[DB] Guide: docs/MONGODB_ATLAS.md');
+    }
     process.exit(1);
   }
 

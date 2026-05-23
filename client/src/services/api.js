@@ -39,7 +39,9 @@ const apiFetch = async (endpoint, options = {}) => {
       res = await fetch(url, { ...options, headers });
     } else {
       clearTokens();
-      window.location.href = '/login';
+      // HashRouter: reload app root so Login gate renders
+      window.location.hash = '#/';
+      window.location.reload();
       throw new Error('Session expired. Please login again.');
     }
   }
@@ -196,6 +198,16 @@ export const infrastructureAPI = {
   getGraph: () => apiFetch('/infrastructure/graph'),
   searchGraph: (q) => apiFetch(`/infrastructure/graph/search?q=${encodeURIComponent(q)}`),
   getRelationships: () => apiFetch('/infrastructure/relationships'),
+};
+
+// ═══════════════════════════════════════════════
+// Threat Intelligence API
+// ═══════════════════════════════════════════════
+export const tiAPI = {
+  getStatus: () => apiFetch('/ti/status'),
+  lookupCVE: (cveId) => apiFetch(`/ti/cve/${encodeURIComponent(cveId)}`),
+  enrichIP: (ip) => apiFetch(`/ti/ip/${encodeURIComponent(ip)}`),
+  enrichDomain: (domain) => apiFetch(`/ti/domain/${encodeURIComponent(domain)}`),
 };
 
 // ═══════════════════════════════════════════════

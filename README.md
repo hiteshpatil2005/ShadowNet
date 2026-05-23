@@ -1,95 +1,239 @@
-# 🌐 ShadowNet AI
-### Advanced Attack Surface Management & Threat Intelligence Platform
+# ShadowNet AI
 
-ShadowNet AI is an advanced cybersecurity intelligence platform designed for security operation centers (SOC) and enterprise risk analysts. The platform aggregates exposed digital footprint data, identifies active server vulnerabilities, matches compromised credentials, maps network relationships, simulates adversary path takeovers, and generates report assessments through an immersive, high-tech interface.
-
----
-
-## 💎 Project Objectives & Core Vision
-*   **Intuitive Threat Mapping:** Empower security analysts to explore exposed digital assets and map dependencies across complex environments.
-*   **Attacker Behavior Simulation:** Forecast risk pathways and trace lateral adversary movements before compromise occurs.
-*   **Digital Footprint Tracking:** Monitor data leakages, exposed AWS S3 / GCP buckets, and leaked corporate credentials in real-time.
-*   **Immutable Analyst Collaboration:** Support real-time notepad documentation, custom templates, and direct PDF/HTML reporting tools.
+**ShadowNet AI** is an attack surface management and threat intelligence platform for security analysts. It maps your organization’s exposed assets (domains, cloud storage, credentials), correlates risks, simulates attack paths, and helps you monitor and report—all from one web dashboard.
 
 ---
 
-## 🚀 The Nine Pillars (Functional Views)
+## What this project does
 
-### 1. 📊 Executive Command Dashboard
-*   **Postures & Threat Dial:** An interactive speedometer dial tracking real-time risk index levels (rated High Risk at `78/100`).
-*   **Key Exposure Alerts Feed:** Prioritized streams detailing recently crawled critical and high-severity threat vectors.
-*   **Vulnerability Radar Chart:** Interactive Recharts distribution analyzing exposures across categories (Port Vulnerabilities, Cloud Exposures, Credential Leaks, API disclosure).
-*   **Historical Risk Indices:** 30-day area chart tracking monitored asset coverage against threat score fluctuations.
+| Feature | What you get |
+|---------|----------------|
+| **Dashboard** | Risk score, alerts, asset counts, trends |
+| **Digital footprint** | Subdomains, leaked credentials, cloud misconfigurations |
+| **Exposure correlation** | Heatmap linking services and credential leaks |
+| **Attack path simulation** | Step-by-step adversary scenarios + remediation checklist |
+| **Infrastructure graph** | Visual map of assets and relationships |
+| **Continuous monitoring** | Live-style alert feed + keyword rules |
+| **Asset profile** | Deep view per asset (ports, CVE from NVD, RIPEstat network context) |
+| **Reporting** | Downloadable security summaries |
 
-### 2. 🔍 Digital Footprint Explorer
-*   **Exposed Assets Registry:** Unified database representing subdomains, server IPs, risk ratings, and crawl discovery methods.
-*   **Interactive Filters:** Quick tabs to isolate assets by cloud service provider (AWS, GCP, Self-Hosted) or network crawler source (DNS AXFR, Transparency logs, Active Scans).
-*   **Profile pivots:** Custom hooks allowing analysts to pivot seamlessly into deep records configurations.
+Data is stored in **MongoDB Atlas** and served by a **Node.js API**; the UI is **React**.
 
-### 3. ⛓️ Exposure Correlation Matrix
-*   **Threat Vector Cross-Reference:** Tabular mapping linking exposed ports directly with credential breach details and unpatched CVE indexes (e.g., CVE-2023-46805, CVE-2024-23897).
-*   **Takeover Threat Paths:** Logical summaries highlighting critical structural vulnerabilities like Active Directory Dominance paths.
-
-### 4. 🎯 Attack Path Simulator
-*   **Simulated Adversary Walkthroughs:** Step-by-step visual map following real-world MITRE ATT&CK techniques (Reconnaissance, initial access, lateral movement, Kerberoasting, and final ransomware exfiltration).
-*   **Adversary Action Terminal:** Micro-logs displaying predicted breach confidence levels and simulated script behaviors.
-*   **Mitigation Checklists:** Prioritized operational lists allowing analysts to mark tasks as Completed or In Progress to track remediation status.
-
-### 5. 🕸️ Infrastructure Intelligence Graph Map
-*   **Force-Directed Network Topology:** Immersive, draggable node-link layout powered by **React Flow 12 (`@xyflow/react`)**.
-*   **Draggable Node Classifications:** Custom interactive node components for primary Domains, Subdomains, Cloud Storage buckets, credentials, and network services.
-*   **Custom Edge Connections:** Glowing animated connectors matching severity vectors (e.g., critical path flows represented by pulsing red lines).
-
-### 6. 🚨 Continuous Monitoring Console
-*   **Keyword Alert Manager:** Form interface allowing analysts to enroll custom monitoring keywords for domains, key emails, or bucket namespaces.
-*   **Discovery Scan Stream:** Ongoing real-time terminal output displaying crawler events, API detections, and deep-web parses.
-
-### 7. 💻 Deep Asset Profile Terminal
-*   **Domain Zone Files:** Full table breakdown of DNS records (A, MX, NS, TXT, SOA).
-*   **Port & Service Banner Registry:** Detail maps showing active host connection statuses, server banners (e.g., `Apache-Coyote/1.1`, `Tomcat/8.5.31`), and SSL validation periods.
-*   **State Dumps:** Raw JSON state inspector showing compiled footprint data directly.
-
-### 8. 📝 Report Builder & Analyst Notepad
-*   **Compliance & Technical Templates:** Automated drafting layouts matching SOC 2, ISO 27001, and C-Level Executive summaries.
-*   **Interactive Analyst Scratchpad:** Active textarea workspace for jotting down notes while navigating between dashboards.
-*   **Multiformat Exporter:** Utilities to print or download reports in clean PDF or HTML files.
-
-### 9. 🔒 Authorization & Enrollment Portal
-*   **Analyst Login Gateway:** Secure portal checking certificates and enforcing encrypted sessions.
-*   **Analyst Terminal Enrollment (New User Registration):** A multi-step registration interface allowing new users to select their SOC role and generate a unique cryptographic profile.
-*   **Mock Biometrics Verification:** Interactive scan engine displaying a fingerprint scanning layout with rolling cryptographic progress bars.
+**No Docker required.** You only need Node.js, npm, and a MongoDB Atlas account (free tier). Everything runs as two local processes: the API and the Vite dev server.
 
 ---
 
-## 🛠️ Technology Stack & Architectures
+## How to use this project
 
-| Core Stack | Framework | Key Implementation Roles |
-| :--- | :--- | :--- |
-| **React 19** | Frontend Core | Handles active states, search memoizations, and secure context providers. |
-| **Vite 7** | Development Env | Drives instant Hot Module Replacement (HMR) and optimized compilations. |
-| **Tailwind CSS v4** | Layout & Themes | Tailors custom modern cyber-dark styles and visual properties. |
-| **@xyflow/react** | Network Graphs | Powers custom nodes and force-directed draggable layouts. |
-| **Recharts** | Data Charting | Renders customizable vector graphs matched to dark themes. |
-| **Framer Motion** | Motion Styling | Manages smooth interface transitions, scanner cycles, and glow overlays. |
+Follow these steps in order the first time. After that, only **steps 5–6** are needed for daily use.
 
----
+### Step 1 — Install Node.js (no Docker)
 
-## 📂 Repository Directory Layout
+- Install [Node.js 18+](https://nodejs.org/) — this is the only runtime you need
+- Open the project folder in a terminal
+- You do **not** need Docker Desktop or `docker compose`
 
-```text
-ShadowNet_AI/
-├── client/                     # Monolithic React + Vite frontend client
-│   ├── public/                 # Static vector assets
-│   └── src/
-│       ├── components/         # Persistent navigation layout headers & sidebars
-│       ├── context/            # Centralized AppContext.jsx global state provider
-│       ├── data/               # Mock datasets representing CVE correlations & subdomains
-│       ├── pages/              # Nine independent interactive platform pages
-│       └── index.css           # Tailwind v4 configuration, scanlines, and glow layers
-└── README.md                   # Core project details and functional vision (This File)
+### Step 2 — Set up MongoDB Atlas
+
+1. Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+2. Create a **database user** (username + password).
+3. Under **Network Access**, add your **current IP** (or `0.0.0.0/0` for dev only).
+4. Copy the connection string and set the database name to **`shadownet`**.
+
+Full walkthrough: **[docs/MONGODB_ATLAS.md](docs/MONGODB_ATLAS.md)**
+
+### Step 3 — Configure the backend
+
+```bash
+cd server
+npm install
+copy .env.example .env
 ```
 
+Edit `server/.env` (minimum required):
+
+```env
+PORT=5001
+MONGO_URI=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/shadownet?retryWrites=true&w=majority
+JWT_SECRET=any-long-random-string
+JWT_REFRESH_SECRET=another-long-random-string
+```
+
+Optional: add `GEMINI_API_KEY` and other TI keys (see [Free API keys](#free-api-keys-optional)).
+
+### Step 4 — Load demo data
+
+```bash
+cd server
+npm run seed
+```
+
+You should see `[SEED] ✅ Database seeded successfully!`
+
+**Demo login** (use this after seeding):
+
+| | |
+|---|---|
+| Email | `analyst@shadownet.ai` |
+| Password | `ShadowNet2026!` |
+
+### Step 5 — Start the API and the UI
+
+**Terminal 1 — API:**
+
+```bash
+cd server
+npm run dev
+```
+
+Wait for: `ShadowNet AI Backend running on port 5001`
+
+**Terminal 2 — UI:**
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+**Windows:** you can run `.\scripts\run-dev.ps1` to open both in separate windows.
+
+### Step 6 — Open the app and sign in
+
+1. Browser: **http://localhost:5173**
+2. Enter `analyst@shadownet.ai` / `ShadowNet2026!`
+3. You land on the **Dashboard** with live data from Atlas
+
+**Check the API:** http://localhost:5001/api/health → should return `"status":"ok"`
+
 ---
 
-## 🚦 Frontend Development Setup
-For developer prerequisites, dependency installation commands, and steps to launch or build the frontend terminal, please reference the **[Client Setup Documentation](file:///d:/ShadowNet_AI/client/README.md)**.
+## Using the application (day-to-day)
+
+### Sidebar pages
+
+| Page | How to use it |
+|------|----------------|
+| **Dashboard** | Overview of risk, alerts, and stats. Use **Refresh** if you changed data. |
+| **Digital Footprint** | Tabs: **Subdomains**, **Services & APIs**, **Leaked Credentials**, **Cloud**. Use search/filters. Click a row → **View profile** (or arrow) to open **Asset Profile**. |
+| **Exposure Correlation** | Hover the heatmap where services meet credentials. Red/orange cells = high risk. Click to pivot to an asset. |
+| **Attack Paths** | Pick **Scenario 1 / 2** at the top. Read stages and remediation checklist; tick tasks as you work them. **Generate new paths** calls the AI (needs `GEMINI_API_KEY`) or built-in fallbacks. |
+| **Infrastructure Graph** | Drag nodes. **Click** a node for details → **Pivot to Profile File** for full asset view. **Reset Network Topology** restores layout. |
+| **Continuous Monitoring** | Scroll the alert stream. **Acknowledge** or clear alerts. Add **monitoring rules** (keyword + type, e.g. domain `shadownet.ai`). |
+| **Asset Profile** | Opens when you pivot from footprint/graph/search. Shows metadata, CVE info (from NVD if CVE in services), RIPEstat for IPs. Use the **notepad** to save analyst notes locally. |
+| **Reporting** | Choose a template, toggle sections, **Generate report** → downloads a text report from current data. |
+
+### Header (top bar)
+
+- **Global search** — type domain, IP, or email; select a result to jump to **Asset Profile**
+- **Alerts bell** — quick view of critical items
+
+### Registering a new user
+
+On the login screen, switch to **registration**: name, email, password, organization. That creates a **new** org with **empty** data unless you seed again or add assets via API. For exploring the demo, always use the seeded account above.
+
+### What you type / provide
+
+| What | Where | Example |
+|------|--------|---------|
+| Email & password | Login | `analyst@shadownet.ai` / `ShadowNet2026!` |
+| New org signup | Register | Your company name, email, password (6+ chars) |
+| Monitoring keyword | Monitoring → add rule | `admin@company.com`, `CVE-2024`, `mycompany.com` |
+| Search | Header | `vpn.`, `203.0.113`, `admin@` |
+
+Scanning external targets via API (`POST /api/assets/scan`) should only be used on domains you are authorized to test.
+
+---
+
+## Project structure
+
+```text
+ShadowNet/
+├── client/          # React UI — npm install && npm run dev
+├── server/          # Express API — npm install && npm run dev
+├── docs/            # MongoDB Atlas guide
+├── scripts/         # run-dev.ps1 (Windows, starts both apps)
+└── README.md
+```
+
+Dependencies live only in `client/node_modules` and `server/node_modules`. Database is **cloud-only** via MongoDB Atlas (no local MongoDB container).
+
+---
+
+## Free API keys (optional)
+
+All keys go in **`server/.env`**. The app runs without them using seed data and no-key sources.
+
+### Works without any API key
+
+| Source | Use |
+|--------|-----|
+| crt.sh | Certificates / subdomains |
+| DNS enum | Subdomain discovery |
+| OpenPhish / PhishTank | Phishing checks |
+| abuse.ch | Threat feeds |
+| NVD | CVE lookup (optional key for higher limits) |
+| RIPEstat | IP/domain WHOIS & routing |
+
+### Optional keys (free tiers)
+
+| Service | Sign up | `.env` variable |
+|---------|---------|-----------------|
+| Google Gemini | https://aistudio.google.com/apikey | `GEMINI_API_KEY` |
+| NVD (higher limits) | https://nvd.nist.gov/developers/request-an-api-key | `NVD_API_KEY` |
+| AlienVault OTX | https://otx.alienvault.com/ → API Integration | `ALIENVAULT_OTX_KEY` |
+| AbuseIPDB | https://www.abuseipdb.com/register → API | `ABUSEIPDB_API_KEY` |
+| VirusTotal | https://www.virustotal.com/gui/join-us | `VIRUSTOTAL_API_KEY` |
+| URLScan.io | https://urlscan.io/user/signup | `URLSCAN_API_KEY` |
+| ViewDNS | https://viewdns.info/api/ | `VIEWDNS_API_KEY` |
+| Criminal IP / ZoomEye / Hybrid Analysis | Vendor sites | See `server/.env.example` |
+
+Restart the API after changing `.env`.
+
+---
+
+## API reference (for developers)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Server status |
+| POST | `/api/auth/login` | `{ "email", "password" }` |
+| GET | `/api/dashboard/overview` | Stats (requires Bearer token) |
+| GET | `/api/ti/cve/:cveId` | NVD CVE lookup |
+| GET | `/api/ti/ip/:ip` | IP enrichment (AbuseIPDB, RIPEstat, etc.) |
+| GET | `/api/ti/status` | Enabled threat intel adapters |
+
+---
+
+## Troubleshooting
+
+| Problem | What to do |
+|---------|------------|
+| Blank dashboard / errors in UI | Is `npm run dev` running in **server** on port **5001**? Check http://localhost:5001/api/health |
+| MongoDB connection failed | Atlas → **Network Access** → add your IP. Check `MONGO_URI` user, password, and `/shadownet` in the URI → [Atlas guide](docs/MONGODB_ATLAS.md) |
+| Seed fails | Fix MongoDB first, then `cd server && npm run seed` |
+| Login works but no assets | Run `npm run seed` and log in as `analyst@shadownet.ai` |
+| Attack paths empty | Click **Generate new paths** or re-run seed |
+| Session expired | Log in again (tokens expire after 15 minutes) |
+
+---
+
+## Technology stack
+
+React 19 · Vite 7 · Tailwind CSS 4 · Express · MongoDB Atlas · JWT · Google Gemini (optional) · Threat intel adapters (NVD, RIPEstat, VirusTotal, AbuseIPDB, crt.sh, and others)
+
+---
+
+## Security notes
+
+- Never commit `server/.env` to Git.
+- Demo data uses fictional `shadownet.ai` assets—do not scan real third-party systems without permission.
+- Use strong `JWT_SECRET` values in production.
+
+---
+
+## More documentation
+
+- [MongoDB Atlas setup](docs/MONGODB_ATLAS.md)
+- [Backend quick reference](server/README.md)
+- [Frontend quick reference](client/README.md)

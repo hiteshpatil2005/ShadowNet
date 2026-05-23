@@ -38,10 +38,15 @@ const DigitalFootprint = () => {
   const [exporting, setExporting] = useState(false);
   const [exportComplete, setExportComplete] = useState(false);
 
+  const apiServicesCount = useMemo(() => subdomains.filter(s => {
+    const svc = (s.services || '').toLowerCase();
+    return svc.includes('api') || svc.includes('swagger') || svc.includes('rest') || svc.includes('graphql');
+  }).length, [subdomains]);
+
   // Tab definitions
   const tabs = [
     { id: 'subdomains', label: 'Subdomains', icon: Globe, count: subdomains.length },
-    { id: 'apis', label: 'Services & APIs', icon: Cpu, count: 5 },
+    { id: 'apis', label: 'Services & APIs', icon: Cpu, count: apiServicesCount },
     { id: 'credentials', label: 'Leaked Credentials', icon: Lock, count: credentials.length },
     { id: 'cloud', label: 'Cloud Exposures', icon: Cloud, count: cloudExposures.length }
   ];

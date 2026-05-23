@@ -30,10 +30,13 @@ router.post('/simulate', authenticate, async (req, res, next) => {
     const assets = await DigitalAsset.find({ organization_id: req.organizationId }).limit(20);
     const correlations = await Correlation.find({ organization_id: req.organizationId }).sort({ risk_score: -1 }).limit(10);
 
-    const paths = await generateAttackPaths(
+    let paths = await generateAttackPaths(
       assets.map(a => ({ type: a.asset_type, value: a.asset_value, risk: a.risk_level, score: a.risk_score })),
       correlations.map(c => ({ title: c.title, type: c.correlation_type, score: c.risk_score }))
     );
+    if (!Array.isArray(paths) || paths.length === 0) {
+      paths = [{ name: 'No paths generated', attack_scenario_type: 'credential_abuse', probability: '0%', impact: 'LOW', stages: [], remediation: [], timeline_estimate: 'N/A', ai_reasoning: 'Insufficient data to simulate attack paths.' }];
+    }
 
     // Save generated paths
     const saved = [];

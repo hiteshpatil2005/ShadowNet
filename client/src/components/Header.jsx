@@ -39,8 +39,7 @@ const Header = () => {
   }, []);
 
   const handleSearchSelect = (asset) => {
-    // Map of titles to mock IDs or matching logic
-    // Find matching subdomain
+    // Pivot to asset profile by registry id
     navigateToAssetProfile(asset.id);
     setSearchQuery("");
     setIsDropdownOpen(false);

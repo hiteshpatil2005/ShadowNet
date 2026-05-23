@@ -1,8 +1,17 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  authAPI, dashboardAPI, assetsAPI, credentialsAPI, alertsAPI,
-  attackPathsAPI, threatPersonasAPI, monitoringAPI, correlationsAPI,
-  setTokens, clearTokens, getToken
+  authAPI,
+  dashboardAPI,
+  assetsAPI,
+  credentialsAPI,
+  alertsAPI,
+  attackPathsAPI,
+  threatPersonasAPI,
+  monitoringAPI,
+  correlationsAPI,
+  setTokens,
+  clearTokens,
+  getToken,
 } from '../services/api';
 
 const AppContext = createContext();
@@ -50,6 +59,7 @@ export const AppProvider = ({ children }) => {
         personasRes,
         rulesRes,
         corrRes,
+        overviewRes,
       ] = await Promise.allSettled([
         assetsAPI.getFootprint({ limit: 200 }),
         credentialsAPI.getLeaked({ limit: 200 }),
@@ -58,6 +68,7 @@ export const AppProvider = ({ children }) => {
         threatPersonasAPI.getAll(),
         monitoringAPI.getRules(),
         correlationsAPI.getAll(),
+        dashboardAPI.getOverview(),
       ]);
 
       // Process assets — separate subdomains from cloud resources
@@ -86,7 +97,7 @@ export const AppProvider = ({ children }) => {
           riskRating: a.risk_level?.toUpperCase() || 'HIGH',
           riskScore: a.risk_score || 0,
           configurationIssue: a.services || 'Misconfiguration detected',
-          piiCount: Math.floor(Math.random() * 50000),
+          piiCount: a.metadata?.pii_count ?? a.metadata?.estimated_records ?? 0,
           region: a.metadata?.region || 'us-east-1',
           lastScanned: a.last_seen ? new Date(a.last_seen).toLocaleDateString() : 'N/A',
           raw: a,
@@ -178,7 +189,7 @@ export const AppProvider = ({ children }) => {
 
       if (rulesRes.status === 'fulfilled') {
         setMonitoringRules((rulesRes.value.data || []).map(r => ({
-          id: r._id,
+          id: r._id?.toString?.() ?? r.id,
           keyword: r.keyword,
           type: r.type,
           active: r.active,
@@ -187,6 +198,10 @@ export const AppProvider = ({ children }) => {
 
       if (corrRes.status === 'fulfilled') {
         setCorrelations(corrRes.value.data || []);
+      }
+
+      if (overviewRes.status === 'fulfilled') {
+        setDashboardData(overviewRes.value.data || null);
       }
 
     } catch (error) {

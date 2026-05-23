@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   UserCheck, 
   Database, 
@@ -14,12 +14,69 @@ import {
   HeartPulse
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { assetsAPI, tiAPI } from '../services/api';
+
+const mapAssetFromApi = (a) => ({
+  id: a._id,
+  name: a.asset_value,
+  ip: a.ip || 'N/A',
+  ports: Array.isArray(a.ports) ? a.ports : (a.ports ? String(a.ports).split(',').map(p => p.trim()) : []),
+  riskScore: a.risk_score || 0,
+  riskLevel: a.risk_level || 'medium',
+  services: a.services || 'N/A',
+  firstSeen: a.first_discovered ? new Date(a.first_discovered).toLocaleDateString() : 'N/A',
+  lastSeen: a.last_seen ? new Date(a.last_seen).toLocaleDateString() : 'N/A',
+  source: (a.sources || []).join(', ') || 'N/A',
+  sslExpiry: a.metadata?.ssl_expiry || 'N/A',
+  techStack: a.metadata?.tech_stack || 'N/A',
+  cloudProvider: a.cloud_provider || a.metadata?.cloud_provider || 'Self-Hosted',
+  notes: a.notes || '',
+  raw: a,
+});
 
 const AssetProfile = () => {
-  const { selectedAssetId, subdomains, credentials, logs, setLogs } = useApp();
+  const { selectedAssetId, subdomains, cloudExposures, credentials, logs, setLogs, user } = useApp();
+  const [apiAsset, setApiAsset] = useState(null);
+  const [assetLoading, setAssetLoading] = useState(false);
+  const [cveIntel, setCveIntel] = useState(null);
+  const [ipIntel, setIpIntel] = useState(null);
 
-  // Find the selected subdomain in our database
-  const activeAsset = subdomains.find(s => s.id === selectedAssetId) || subdomains[1]; // fallback to vpn
+  const listAsset = useMemo(() => {
+    const fromList = [...subdomains, ...cloudExposures.map(c => ({
+      id: c.id,
+      name: c.bucketName,
+      ip: 'N/A',
+      ports: [],
+      riskScore: c.riskScore,
+      riskLevel: c.riskRating?.toLowerCase() || 'high',
+      services: c.configurationIssue,
+      source: 'Cloud Scan',
+      cloudProvider: c.cloudProvider,
+    }))];
+    return fromList.find(s => s.id === selectedAssetId) || fromList[0] || null;
+  }, [selectedAssetId, subdomains, cloudExposures]);
+
+  useEffect(() => {
+    if (!selectedAssetId) {
+      setApiAsset(null);
+      return;
+    }
+    let cancelled = false;
+    setAssetLoading(true);
+    assetsAPI.getAsset(selectedAssetId)
+      .then(res => {
+        if (!cancelled && res.data) setApiAsset(mapAssetFromApi(res.data));
+      })
+      .catch(() => {
+        if (!cancelled) setApiAsset(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAssetLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedAssetId]);
+
+  const activeAsset = apiAsset || listAsset;
 
   // Accordion active toggles
   const [certOpen, setCertOpen] = useState(true);
@@ -28,10 +85,38 @@ const AssetProfile = () => {
 
   // Analyst Notepad State
   const [noteContent, setNoteContent] = useState('');
-  const [localNotes, setLocalNotes] = useState([
-    { timestamp: "2026-05-22T19:30:00Z", author: "Sarah Jenkins", text: "Verified that SMB port 445 on vpn endpoint is indeed leaking Samba 4.1 banners. Initiated firewall block queue." },
-    { timestamp: "2026-05-23T04:15:00Z", author: "Sarah Jenkins", text: "Coordinating with DevOps team (Hitesh Patil) to force credential rotations on Jenkins gateway." }
-  ]);
+  const [localNotes, setLocalNotes] = useState([]);
+
+  const cveFromServices = useMemo(() => {
+    const text = `${activeAsset?.services || ''} ${activeAsset?.raw?.metadata?.cves || ''}`;
+    const match = text.match(/CVE-\d{4}-\d+/i);
+    return match ? match[0].toUpperCase() : (activeAsset?.raw?.metadata?.primary_cve || null);
+  }, [activeAsset]);
+
+  useEffect(() => {
+    if (!cveFromServices) {
+      setCveIntel(null);
+      return;
+    }
+    let cancelled = false;
+    tiAPI.lookupCVE(cveFromServices)
+      .then(res => { if (!cancelled) setCveIntel(res.data); })
+      .catch(() => { if (!cancelled) setCveIntel(null); });
+    return () => { cancelled = true; };
+  }, [cveFromServices]);
+
+  useEffect(() => {
+    const ip = activeAsset?.ip;
+    if (!ip || ip === 'N/A' || !/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+      setIpIntel(null);
+      return;
+    }
+    let cancelled = false;
+    tiAPI.enrichIP(ip)
+      .then(res => { if (!cancelled) setIpIntel(res.data); })
+      .catch(() => { if (!cancelled) setIpIntel(null); });
+    return () => { cancelled = true; };
+  }, [activeAsset?.ip]);
 
   const handleSaveNote = (e) => {
     e.preventDefault();
@@ -39,7 +124,7 @@ const AssetProfile = () => {
 
     const newNote = {
       timestamp: new Date().toISOString(),
-      author: "Sarah Jenkins",
+      author: user?.name || "Analyst",
       text: noteContent.trim()
     };
 
@@ -61,9 +146,23 @@ const AssetProfile = () => {
   };
 
   // Find associated leaked credential if any
-  const associatedCred = credentials.find(c => 
-    c.email.includes(activeAsset.name.replace('vpn.', '').replace('api-dev.', '').replace('staging.', ''))
-  );
+  const associatedCred = activeAsset ? credentials.find(c => {
+    const domain = activeAsset.name?.split('.').slice(-2).join('.');
+    return domain && c.email?.includes(domain);
+  }) : null;
+
+  const portsDisplay = Array.isArray(activeAsset?.ports)
+    ? activeAsset.ports.join(', ')
+    : (activeAsset?.ports || 'N/A');
+
+  if (!activeAsset) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-cyber-text-secondary font-mono text-sm">
+        <Database className="w-10 h-10 mb-4 opacity-40" />
+        <p>No asset selected. Open Digital Footprint or the Infrastructure Graph and pivot to an asset profile.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -73,6 +172,7 @@ const AssetProfile = () => {
         <h1 className="text-xl font-bold tracking-wider text-cyber-text-primary uppercase flex items-center gap-2">
           <UserCheck className="w-5 h-5 text-neon-blue" />
           <span>Detailed Exposed Asset Profile: {activeAsset.name}</span>
+          {assetLoading && <span className="text-[10px] text-neon-blue font-mono normal-case">syncing…</span>}
         </h1>
         <p className="text-xs text-cyber-text-secondary leading-relaxed font-mono">
           System Registry ID: {activeAsset.id} • Scanning Target: {activeAsset.ip}
@@ -184,7 +284,7 @@ const AssetProfile = () => {
                       <span className="absolute -left-8.5 top-0.5 w-4 h-4 rounded-full bg-neon-blue border border-cyber-black flex items-center justify-center text-[7px] text-cyber-black font-bold">1</span>
                       <div className="text-[10px] text-cyber-text-secondary">May 23, 2026 • 08:00 AM</div>
                       <h4 className="text-xs font-bold text-cyber-text-primary mt-0.5">Asset Re-indexed & Monitored</h4>
-                      <p className="text-[10px] text-cyber-text-secondary mt-0.5">Active crawler verifies open ports {activeAsset.ports.join(', ')} and matches running Nginx payloads.</p>
+                      <p className="text-[10px] text-cyber-text-secondary mt-0.5">Active crawler verifies open ports {portsDisplay} and matches running service banners.</p>
                     </div>
 
                     <div className="relative">
@@ -232,7 +332,7 @@ const AssetProfile = () => {
                         The email domain user <span className="text-cyber-text-primary font-bold">{associatedCred.email}</span> ({associatedCred.owner}) has verified plaintext credentials exposed on breach forums that authorize access on this asset scope.
                       </p>
                       <div className="text-[10px] text-red-300">
-                        Exposed pass: <span className="font-bold">{associatedCred.leakedPassword}</span> • Risk Confidence: 95%
+                        Source: <span className="font-bold">{associatedCred.source}</span> • Severity: {associatedCred.severity}
                       </div>
                     </div>
                   ) : (
@@ -241,12 +341,23 @@ const AssetProfile = () => {
                     </div>
                   )}
 
-                  {/* Vulnerability mapping summaries */}
-                  <div className="p-3 bg-cyber-black border border-cyber-light/30 rounded space-y-1.5">
-                    <span className="text-[9px] text-orange-400 font-bold uppercase tracking-wider">Known Active CVE Scans</span>
-                    <h4 className="text-xs font-bold text-cyber-text-primary">CVE-2023-46805: VPN Session Hijack bypass</h4>
-                    <p className="text-[10px] text-cyber-text-secondary leading-relaxed">Allows an attacker to bypass authentication scopes and traverse internal active directories. Confirmed in simulator paths.</p>
-                  </div>
+                  {cveIntel?.found && (
+                    <div className="p-3 bg-cyber-black border border-cyber-light/30 rounded space-y-1.5">
+                      <span className="text-[9px] text-orange-400 font-bold uppercase tracking-wider">NVD CVE Intelligence</span>
+                      <h4 className="text-xs font-bold text-cyber-text-primary">{cveIntel.cve_id} — {cveIntel.severity || 'UNRATED'} ({cveIntel.cvss_score ?? 'N/A'})</h4>
+                      <p className="text-[10px] text-cyber-text-secondary leading-relaxed">{cveIntel.description?.slice(0, 280)}…</p>
+                    </div>
+                  )}
+
+                  {ipIntel?.ripestat && (
+                    <div className="p-3 bg-cyber-black border border-cyber-light/30 rounded space-y-1.5">
+                      <span className="text-[9px] text-purple-400 font-bold uppercase tracking-wider">RIPEstat Network Context</span>
+                      <p className="text-[10px] text-cyber-text-secondary">
+                        {ipIntel.ripestat.holder || 'Unknown holder'} • {ipIntel.ripestat.country || '—'} • {ipIntel.ripestat.asn || '—'}
+                      </p>
+                    </div>
+                  )}
+
                 </div>
               )}
             </div>

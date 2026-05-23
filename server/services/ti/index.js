@@ -11,6 +11,8 @@ import UrlScanAdapter from './urlScanAdapter.js';
 import OpenPhishAdapter from './openPhishAdapter.js';
 import PhishTankAdapter from './phishTankAdapter.js';
 import HybridAnalysisAdapter from './hybridAnalysisAdapter.js';
+import NvdAdapter from './nvdAdapter.js';
+import RipestatAdapter from './ripestatAdapter.js';
 import TICache from '../../models/TICache.js';
 
 class TIOrchestrator {
@@ -29,17 +31,28 @@ class TIOrchestrator {
       openphish: new OpenPhishAdapter(),
       phishtank: new PhishTankAdapter(),
       hybridanalysis: new HybridAnalysisAdapter(),
+      nvd: new NvdAdapter(),
+      ripestat: new RipestatAdapter(),
     };
   }
 
+  async lookupCVE(cveId) {
+    return this.adapters.nvd.query(cveId, 'default');
+  }
+
+  async searchCVE(keyword) {
+    return this.adapters.nvd.query(keyword, 'keyword');
+  }
+
   async enrichIP(ip) {
-    const [alienvault, abuseipdb, virustotal, criminalip, zoomeye, abusech] = await Promise.allSettled([
+    const [alienvault, abuseipdb, virustotal, criminalip, zoomeye, abusech, ripestat] = await Promise.allSettled([
       this.adapters.alienvault.query(ip, 'ip'),
       this.adapters.abuseipdb.query(ip, 'ip'),
       this.adapters.virustotal.query(ip, 'ip'),
       this.adapters.criminalip.query(ip, 'host'),
       this.adapters.zoomeye.query(ip, 'host'),
       this.adapters.abusech.query(ip, 'host'),
+      this.adapters.ripestat.query(ip, 'whois'),
     ]);
 
     const result = {
@@ -50,6 +63,7 @@ class TIOrchestrator {
       criminalip: criminalip.status === 'fulfilled' ? criminalip.value : null,
       zoomeye: zoomeye.status === 'fulfilled' ? zoomeye.value : null,
       abusech: abusech.status === 'fulfilled' ? abusech.value : null,
+      ripestat: ripestat.status === 'fulfilled' ? ripestat.value : null,
       enriched_at: new Date().toISOString(),
     };
 
@@ -59,7 +73,7 @@ class TIOrchestrator {
   }
 
   async enrichDomain(domain) {
-    const [alienvault, virustotal, urlscan, crtsh, viewdns, dnsenum, openphish, phishtank, abusech] = await Promise.allSettled([
+    const [alienvault, virustotal, urlscan, crtsh, viewdns, dnsenum, openphish, phishtank, abusech, ripestat] = await Promise.allSettled([
       this.adapters.alienvault.query(domain, 'domain'),
       this.adapters.virustotal.query(domain, 'domain'),
       this.adapters.urlscan.query(domain, 'search'),
@@ -69,6 +83,7 @@ class TIOrchestrator {
       this.adapters.openphish.query(domain, 'check'),
       this.adapters.phishtank.query(domain, 'check'),
       this.adapters.abusech.query(domain, 'host'),
+      this.adapters.ripestat.query(domain, 'whois'),
     ]);
 
     const result = {
@@ -82,6 +97,7 @@ class TIOrchestrator {
       openphish: openphish.status === 'fulfilled' ? openphish.value : null,
       phishtank: phishtank.status === 'fulfilled' ? phishtank.value : null,
       abusech: abusech.status === 'fulfilled' ? abusech.value : null,
+      ripestat: ripestat.status === 'fulfilled' ? ripestat.value : null,
       enriched_at: new Date().toISOString(),
     };
 

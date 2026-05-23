@@ -170,7 +170,7 @@ async function seed() {
       organization_id: org._id,
       monitoring_enabled: true,
       scan_interval: 24,
-      ti_sources_enabled: ['alienvault', 'abuseipdb', 'virustotal', 'crtsh', 'urlscan', 'censys', 'abusech'],
+      ti_sources_enabled: ['alienvault', 'abuseipdb', 'virustotal', 'crtsh', 'urlscan', 'abusech', 'nvd', 'ripestat'],
       alert_rules: [
         { keyword: 'shadownet.ai', type: 'Domain Monitor', active: true },
         { keyword: 'admin@shadownet.ai', type: 'Credential Monitor', active: true },

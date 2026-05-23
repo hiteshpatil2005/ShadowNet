@@ -20,6 +20,7 @@ import monitoringRoutes from './routes/monitoring.js';
 import reportRoutes from './routes/reports.js';
 import infrastructureRoutes from './routes/infrastructure.js';
 import adminRoutes from './routes/admin.js';
+import tiRoutes from './routes/ti.js';
 
 const app = express();
 
@@ -45,6 +46,7 @@ app.use('/api/monitoring', monitoringRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/infrastructure', infrastructureRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ti', tiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
