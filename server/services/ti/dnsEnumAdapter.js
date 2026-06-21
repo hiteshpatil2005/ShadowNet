@@ -47,7 +47,5 @@ export default class DnsEnumAdapter extends BaseAdapter {
     return records;
   }
 
-  getFallback(target) {
-    return { _source: 'dnsenum', _fallback: true, target, subdomains: [{ subdomain: `www.${target}`, ip: '93.184.216.34', type: 'A' }], count: 1 };
-  }
+  getFallback(target) { return null; }
 }

@@ -19,7 +19,5 @@ export default class HybridAnalysisAdapter extends BaseAdapter {
     return { results: items.slice(0, 5).map(r => ({ sha256: r?.sha256, verdict: r?.verdict, threat_score: r?.threat_score, malware_family: r?.vx_family, type: r?.type, size: r?.size })) };
   }
 
-  getFallback(target) {
-    return { _source: 'hybridanalysis', _fallback: true, target, results: [], count: 0 };
-  }
+  getFallback(target) { return null; }
 }

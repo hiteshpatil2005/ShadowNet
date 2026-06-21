@@ -11,7 +11,8 @@ import {
   FolderHeart,
   Terminal,
   LogOut,
-  UserCheck
+  UserCheck,
+  Search,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -20,6 +21,7 @@ const Sidebar = () => {
 
   const navigationItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Investigate', path: '/investigation', icon: Search },
     { name: 'Digital Footprint', path: '/footprint', icon: Globe },
     { name: 'Exposure Correlations', path: '/correlations', icon: Cpu },
     { name: 'Attack Path Simulation', path: '/attack-paths', icon: Route },

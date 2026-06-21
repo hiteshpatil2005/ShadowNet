@@ -59,4 +59,22 @@ router.put('/:credential_id', authenticate, async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+
+// DELETE /api/credentials/:credential_id — delete single
+router.delete('/:credential_id', authenticate, async (req, res, next) => {
+  try {
+    await LeakedCredential.findOneAndDelete({ _id: req.params.credential_id, organization_id: req.organizationId });
+    res.json({ status: 'success', message: 'Credential deleted.' });
+  } catch (error) { next(error); }
+});
+
+// DELETE /api/credentials — delete all credentials for this org
+router.delete('/', authenticate, async (req, res, next) => {
+  try {
+    const result = await LeakedCredential.deleteMany({ organization_id: req.organizationId });
+    res.json({ status: 'success', message: `${result.deletedCount} credentials deleted.` });
+  } catch (error) { next(error); }
+});
+
 export default router;
+

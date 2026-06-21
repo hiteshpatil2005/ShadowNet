@@ -74,21 +74,5 @@ export default class CriminalIPAdapter extends BaseAdapter {
     };
   }
 
-  getFallback(target) {
-    return {
-      _source: 'criminalip', _fallback: true, target,
-      ip: target,
-      score: 2,
-      is_malicious: false,
-      ports: [
-        { port: 443, protocol: 'TCP', service: 'HTTPS', banner: '' },
-        { port: 80, protocol: 'TCP', service: 'HTTP', banner: '' },
-      ],
-      country: 'US',
-      organization: 'Cloudflare Inc.',
-      hostname: [],
-      vulnerabilities: [],
-      location: { country: 'US', city: 'San Francisco' },
-    };
-  }
+  getFallback(target) { return null; }
 }

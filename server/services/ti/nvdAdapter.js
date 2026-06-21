@@ -70,19 +70,5 @@ export default class NvdAdapter extends BaseAdapter {
     return { keyword: data?.totalResults, total: data?.totalResults || items.length, cves: items };
   }
 
-  getFallback(target, queryType) {
-    if (queryType === 'keyword') {
-      return { _source: 'nvd', _fallback: true, keyword: target, total: 0, cves: [] };
-    }
-    return {
-      _source: 'nvd',
-      _fallback: true,
-      cve_id: target,
-      found: false,
-      description: 'NVD lookup unavailable (rate limit or offline).',
-      severity: null,
-      cvss_score: null,
-      references: [],
-    };
-  }
+  getFallback(target, queryType) { return null; }
 }

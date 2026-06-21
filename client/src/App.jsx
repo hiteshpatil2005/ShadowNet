@@ -12,6 +12,7 @@ import ContinuousMonitoring from './pages/ContinuousMonitoring';
 import AssetProfile from './pages/AssetProfile';
 import Reporting from './pages/Reporting';
 import Login from './pages/Login';
+import Investigation from './pages/Investigation';
 
 const MainLayout = () => {
   const { isAuthenticated, initialLoading } = useApp();
@@ -42,18 +43,19 @@ const MainLayout = () => {
         <Header />
 
         {/* Dynamic page contents grid */}
-        <main className="flex-1 overflow-y-auto p-6 cyber-grid relative">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/footprint" element={<DigitalFootprint />} />
-            <Route path="/correlations" element={<ExposureCorrelation />} />
-            <Route path="/attack-paths" element={<AttackPathSimulation />} />
-            <Route path="/graph" element={<InfrastructureGraph />} />
-            <Route path="/monitoring" element={<ContinuousMonitoring />} />
-            <Route path="/asset-profile" element={<AssetProfile />} />
-            <Route path="/reporting" element={<Reporting />} />
-          </Routes>
-        </main>
+          <main className="flex-1 overflow-y-auto relative">
+            <Routes>
+              <Route path="/" element={<div className="p-6 cyber-grid"><Dashboard /></div>} />
+              <Route path="/footprint" element={<div className="p-6 cyber-grid"><DigitalFootprint /></div>} />
+              <Route path="/correlations" element={<div className="p-6 cyber-grid"><ExposureCorrelation /></div>} />
+              <Route path="/attack-paths" element={<div className="p-6 cyber-grid"><AttackPathSimulation /></div>} />
+              <Route path="/graph" element={<div className="p-6 cyber-grid"><InfrastructureGraph /></div>} />
+              <Route path="/monitoring" element={<div className="p-6 cyber-grid"><ContinuousMonitoring /></div>} />
+              <Route path="/asset-profile" element={<div className="p-6 cyber-grid"><AssetProfile /></div>} />
+              <Route path="/reporting" element={<div className="p-6 cyber-grid"><Reporting /></div>} />
+              <Route path="/investigation" element={<Investigation />} />
+            </Routes>
+          </main>
       </div>
     </div>
   );

@@ -336,7 +336,7 @@ const Dashboard = () => {
           <p className="text-[10px] text-cyber-text-secondary leading-relaxed">
             Live breakdown of {totalAssets} discovered assets across severity levels.
           </p>
-          <div className="h-48">
+          <div style={{ width: '100%', minHeight: '192px', height: '192px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={severityBreakdown}>
                 <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
@@ -363,7 +363,7 @@ const Dashboard = () => {
           <p className="text-[10px] text-cyber-text-secondary leading-relaxed">
             {alerts.length} active alerts distributed by severity.
           </p>
-          <div className="h-48 flex items-center justify-center">
+          <div style={{ width: '100%', minHeight: '192px', height: '192px' }}>
             {alertDistribution.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -384,9 +384,11 @@ const Dashboard = () => {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="text-center">
-                <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-                <span className="text-[10px] text-cyber-text-secondary">No active alerts</span>
+              <div className="h-full flex items-center justify-center">
+                <div className="text-center">
+                  <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+                  <span className="text-[10px] text-cyber-text-secondary">No active alerts</span>
+                </div>
               </div>
             )}
           </div>
@@ -410,7 +412,7 @@ const Dashboard = () => {
           <p className="text-[10px] text-cyber-text-secondary leading-relaxed">
             {threatPersonas.length} predicted threat personas targeting your organization.
           </p>
-          <div className="h-52">
+          <div style={{ width: '100%', minHeight: '208px', height: '208px' }}>
             {radarData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>

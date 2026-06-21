@@ -92,18 +92,5 @@ export default class RipestatAdapter extends BaseAdapter {
     };
   }
 
-  getFallback(target) {
-    return {
-      _source: 'ripestat',
-      _fallback: true,
-      resource: target,
-      holder: '',
-      country: '',
-      asn: '',
-      inetnum: '',
-      abuse_contact: '',
-      prefix_count: 0,
-      prefixes: [],
-    };
-  }
+  getFallback(target) { return null; }
 }

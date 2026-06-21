@@ -1,94 +1,169 @@
-# ShadowNet AI
+# 🛡️ ShadowNet AI — Real-Time Threat Intelligence Platform
 
-**ShadowNet AI** is an attack surface management and threat intelligence platform for security analysts. It maps your organization’s exposed assets (domains, cloud storage, credentials), correlates risks, simulates attack paths, and helps you monitor and report—all from one web dashboard.
+**ShadowNet AI** is a full-stack cybersecurity OSINT and threat intelligence platform. It discovers your organization's exposed assets, investigates IPs/domains/CVEs through live threat intelligence APIs, correlates risks using AI, simulates attack paths powered by Gemini, and generates executive security reports — all from one dark-themed web dashboard.
 
----
-
-## What this project does
-
-| Feature | What you get |
-|---------|----------------|
-| **Dashboard** | Risk score, alerts, asset counts, trends |
-| **Digital footprint** | Subdomains, leaked credentials, cloud misconfigurations |
-| **Exposure correlation** | Heatmap linking services and credential leaks |
-| **Attack path simulation** | Step-by-step adversary scenarios + remediation checklist |
-| **Infrastructure graph** | Visual map of assets and relationships |
-| **Continuous monitoring** | Live-style alert feed + keyword rules |
-| **Asset profile** | Deep view per asset (ports, CVE from NVD, RIPEstat network context) |
-| **Reporting** | Downloadable security summaries |
-
-Data is stored in **MongoDB Atlas** and served by a **Node.js API**; the UI is **React**.
-
-**No Docker required.** You only need Node.js, npm, and a MongoDB Atlas account (free tier). Everything runs as two local processes: the API and the Vite dev server.
+> ⚠️ **This platform uses only real, live data. No fake or demo data is ever shown.**  
+> If you see "No data available", run an investigation first from the Investigate bar.
 
 ---
 
-## How to use this project
+## ✨ Features
 
-Follow these steps in order the first time. After that, only **steps 5–6** are needed for daily use.
+| Page | What it does |
+|------|-------------|
+| **Dashboard** | Live risk score, asset counts, alert distribution charts, threat radar |
+| **Digital Footprint** | Discovered assets: subdomains, IPs, services, cloud exposures |
+| **Investigate** | Search any IP, domain, or CVE — pulls from VirusTotal, AbuseIPDB, AlienVault OTX, etc. |
+| **Exposure Correlation** | AI engine cross-correlates assets + credentials + TI data into risk correlations |
+| **Attack Path Simulation** | Gemini AI generates realistic attack paths from your real discovered assets |
+| **Infrastructure Graph** | Visual network map of all assets and their relationships |
+| **Continuous Monitoring** | Live alert feed + scheduled scanning of your target domains |
+| **Asset Profile** | Deep per-asset view: ports, CVEs, VirusTotal detections, WHOIS |
+| **Leaked Credentials** | Breached emails and credentials linked to your organization |
+| **Reporting** | Gemini AI generates a full executive security posture report from all your data |
 
-### Step 1 — Install Node.js (no Docker)
+---
 
-- Install [Node.js 18+](https://nodejs.org/) — this is the only runtime you need
-- Open the project folder in a terminal
-- You do **not** need Docker Desktop or `docker compose`
+## 🚀 Quick Setup (For Friends)
 
-### Step 2 — Set up MongoDB Atlas
+### Prerequisites
 
-1. Create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-2. Create a **database user** (username + password).
-3. Under **Network Access**, add your **current IP** (or `0.0.0.0/0` for dev only).
-4. Copy the connection string and set the database name to **`shadownet`**.
+- [Node.js 18+](https://nodejs.org/) — download and install
+- A free [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account
+- A free [Google AI Studio](https://aistudio.google.com) account (for Gemini AI features)
 
-Full walkthrough: **[docs/MONGODB_ATLAS.md](docs/MONGODB_ATLAS.md)**
+---
 
-### Step 3 — Configure the backend
+### Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/your-username/ShadowNet.git
+cd ShadowNet
+```
+
+---
+
+### Step 2 — Set up MongoDB Atlas (Free)
+
+1. Go to [mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas) → **Sign up free**
+2. Create a **free M0 cluster** (any region)
+3. Under **Database Access** → Add a database user (set a username + password)
+4. Under **Network Access** → Add IP Address → **Allow Access from Anywhere** (`0.0.0.0/0`)
+5. Under **Database** → **Connect** → **Drivers** → copy the connection string
+
+The connection string looks like:
+```
+mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxxx.mongodb.net/?retryWrites=true&w=majority
+```
+
+Change `?retryWrites` to `/shadownet?retryWrites` to set the database name.
+
+---
+
+### Step 3 — Get your Gemini API Key (Free)
+
+> Gemini powers AI Attack Path Simulation, Exposure Correlation analysis, and Executive Reports.
+
+**Step-by-step:**
+
+1. Go to **[aistudio.google.com/apikey](https://aistudio.google.com/apikey)**
+2. Sign in with your **Google account**
+3. Click **"Create API key"**
+4. Select **"Create API key in new project"** (or choose an existing project)
+5. Copy the key — it starts with `AIza...`
+
+> 💡 **Free tier limits** (no credit card needed):
+> - `gemini-1.5-flash` → **1,500 requests/day**, 15 requests/minute
+> - Quota resets daily at **midnight UTC (5:30 AM IST)**
+> - If you hit the limit, wait for reset or add billing in Google Cloud Console
+
+---
+
+### Step 4 — Get other free API keys (optional but recommended)
+
+All keys go in `server/.env`. The more keys you add, the richer the threat intelligence data.
+
+| Service | Sign up link | `.env` variable | Free tier |
+|---------|-------------|-----------------|-----------|
+| **VirusTotal** ⭐ | [virustotal.com/gui/join-us](https://www.virustotal.com/gui/join-us) | `VIRUSTOTAL_API_KEY` | 500 req/day |
+| **AbuseIPDB** ⭐ | [abuseipdb.com/register](https://www.abuseipdb.com/register) | `ABUSEIPDB_API_KEY` | 1000 req/day |
+| **AlienVault OTX** | [otx.alienvault.com](https://otx.alienvault.com) → API | `ALIENVAULT_OTX_KEY` | Unlimited |
+| **URLScan.io** | [urlscan.io/user/signup](https://urlscan.io/user/signup) | `URLSCAN_API_KEY` | 1000 req/day |
+| **ViewDNS** | [viewdns.info/api](https://viewdns.info/api/) | `VIEWDNS_API_KEY` | 250 req/day |
+| **Criminal IP** | [criminalip.io](https://www.criminalip.io) | `CRIMINALIP_API_KEY` | 100 req/day |
+| **ZoomEye** | [zoomeye.org](https://www.zoomeye.org) | `ZOOMEYE_API_KEY` | 10,000 results/month |
+| **Hybrid Analysis** | [hybrid-analysis.com](https://hybrid-analysis.com) | `HYBRID_ANALYSIS_API_KEY` | Free |
+| **NVD (CVEs)** | [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key) | `NVD_API_KEY` | Higher rate limits |
+
+> ⭐ = **Highly recommended** — VirusTotal and AbuseIPDB power most of the threat intelligence features.
+
+---
+
+### Step 5 — Configure the backend
 
 ```bash
 cd server
 npm install
-copy .env.example .env
 ```
 
-Edit `server/.env` (minimum required):
+Create `server/.env`:
 
 ```env
+# ─── Core (REQUIRED) ───────────────────────────────────────────
 PORT=5001
-MONGO_URI=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/shadownet?retryWrites=true&w=majority
-JWT_SECRET=any-long-random-string
-JWT_REFRESH_SECRET=another-long-random-string
+MONGO_URI=mongodb+srv://USERNAME:PASSWORD@cluster0.xxxxxx.mongodb.net/shadownet?retryWrites=true&w=majority
+JWT_SECRET=replace-with-any-long-random-string-min-32-chars
+JWT_REFRESH_SECRET=replace-with-another-long-random-string-min-32-chars
+
+# ─── AI (Required for Attack Paths, Correlation AI, Reports) ───
+GEMINI_API_KEY=AIzaSy...your-key-here
+
+# ─── Threat Intelligence APIs (optional, more = richer data) ───
+VIRUSTOTAL_API_KEY=
+ABUSEIPDB_API_KEY=
+ALIENVAULT_OTX_KEY=
+URLSCAN_API_KEY=
+VIEWDNS_API_KEY=
+CRIMINALIP_API_KEY=
+ZOOMEYE_API_KEY=
+HYBRID_ANALYSIS_API_KEY=
+NVD_API_KEY=
 ```
 
-Optional: add `GEMINI_API_KEY` and other TI keys (see [Free API keys](#free-api-keys-optional)).
+> **Never commit this file to Git.** It's already in `.gitignore`.
 
-### Step 4 — Initialize database (no fake data)
+---
+
+### Step 6 — Initialize the database
 
 ```bash
 cd server
 npm run seed
 ```
 
-Creates login only — **no fake assets**. Optional fictional demo: `npm run seed:demo`
+This creates the login account only — **no fake or demo data**.
 
-**Login** (after seed):
+**Login credentials:**
 
-| | |
-|---|---|
+| Field | Value |
+|-------|-------|
 | Email | `analyst@shadownet.ai` |
 | Password | `ShadowNet2026!` |
 
-### Step 5 — Start the API and the UI
+---
 
-**Terminal 1 — API:**
+### Step 7 — Start both servers
+
+**Terminal 1 — Backend API:**
 
 ```bash
 cd server
 npm run dev
 ```
 
-Wait for: `ShadowNet AI Backend running on port 5001`
+Wait for: `🛡️ ShadowNet AI Backend running on port 5001`
 
-**Terminal 2 — UI:**
+**Terminal 2 — Frontend:**
 
 ```bash
 cd client
@@ -96,158 +171,179 @@ npm install
 npm run dev
 ```
 
-**Windows:** you can run `.\scripts\run-dev.ps1` to open both in separate windows.
-
-### Step 6 — Open the app and sign in
-
-1. Browser: **http://localhost:5173**
-2. Enter `analyst@shadownet.ai` / `ShadowNet2026!`
-3. You land on the **Dashboard** with live data from Atlas
-
-**Check the API:** http://localhost:5001/api/health → should return `"status":"ok"`
+**Windows shortcut:** Run `.\scripts\run-dev.ps1` to open both in separate terminal windows automatically.
 
 ---
 
-## Using the application (day-to-day)
+### Step 8 — Open the app
 
-### Sidebar pages
-
-| Page | How to use it |
-|------|----------------|
-| **Dashboard** | Overview of risk, alerts, and stats. Use **Refresh** if you changed data. |
-| **Digital Footprint** | Tabs: **Subdomains**, **Services & APIs**, **Leaked Credentials**, **Cloud**. Use search/filters. Click a row → **View profile** (or arrow) to open **Asset Profile**. |
-| **Exposure Correlation** | Hover the heatmap where services meet credentials. Red/orange cells = high risk. Click to pivot to an asset. |
-| **Attack Paths** | Pick **Scenario 1 / 2** at the top. Read stages and remediation checklist; tick tasks as you work them. **Generate new paths** calls the AI (needs `GEMINI_API_KEY`) or built-in fallbacks. |
-| **Infrastructure Graph** | Drag nodes. **Click** a node for details → **Pivot to Profile File** for full asset view. **Reset Network Topology** restores layout. |
-| **Continuous Monitoring** | Scroll the alert stream. **Acknowledge** or clear alerts. Add **monitoring rules** (keyword + type, e.g. domain `shadownet.ai`). |
-| **Asset Profile** | Opens when you pivot from footprint/graph/search. Shows metadata, CVE info (from NVD if CVE in services), RIPEstat for IPs. Use the **notepad** to save analyst notes locally. |
-| **Reporting** | Choose a template, toggle sections, **Generate report** → downloads a text report from current data. |
-
-### Header (top bar) — live IP / domain investigation
-
-- Type an **IPv4 address** (e.g. `8.8.8.8`) or **domain** (e.g. `google.com`)
-- ShadowNet calls **AbuseIPDB, RIPEstat, VirusTotal, crt.sh**, etc. (based on your API keys)
-- Results appear in the dropdown and are **saved to your inventory**
-- Press Enter or wait ~1s after typing for auto-investigate
-
-### Continuous scanning (Monitoring page)
-
-1. Open **Continuous Monitoring**
-2. Under **Continuous scan targets**, add domains/IPs you are authorized to scan
-3. Click **Run scan now** (or wait for the hourly scheduler on the server)
-4. New assets and alerts appear in **Digital Footprint** and the alert stream
-
-### Header (other)
-
-- **Sync** button — refresh all data from MongoDB (~90s auto-refresh)
-- **Alerts bell** — critical alert count
-
-### Registering a new user
-
-On the login screen, switch to **registration**: name, email, password, organization. That creates a **new** org with **empty** data unless you seed again or add assets via API. For exploring the demo, always use the seeded account above.
-
-### What you type / provide
-
-| What | Where | Example |
-|------|--------|---------|
-| Email & password | Login | `analyst@shadownet.ai` / `ShadowNet2026!` |
-| New org signup | Register | Your company name, email, password (6+ chars) |
-| Monitoring keyword | Monitoring → add rule | `admin@company.com`, `CVE-2024`, `mycompany.com` |
-| Search | Header | `vpn.`, `203.0.113`, `admin@` |
-
-Scanning external targets via API (`POST /api/assets/scan`) should only be used on domains you are authorized to test.
+1. Open **[http://localhost:5173](http://localhost:5173)** in your browser
+2. Sign in with `analyst@shadownet.ai` / `ShadowNet2026!`
+3. Check API health: **[http://localhost:5001/api/health](http://localhost:5001/api/health)** → should return `"status":"ok"`
 
 ---
 
-## Project structure
+## 📖 How to Use the Platform
 
-```text
+### First time — collect real data
+
+The dashboard starts empty. Here's the flow to get real threat intelligence data:
+
+```
+1. Investigate an IP/Domain     →   Header search bar → type any IP or domain
+2. Run Correlation Analysis     →   Exposure Correlation page → "Run Analysis"
+3. Generate Attack Paths        →   Attack Path Simulation → "Generate AI Paths"
+4. Generate Executive Report    →   Reporting → "Generate AI Report"
+```
+
+### Page-by-page guide
+
+#### 🔍 Investigate (Header search bar)
+- Type any **IPv4 address** (e.g. `8.8.8.8`) or **domain** (e.g. `google.com`)
+- ShadowNet queries all your configured APIs simultaneously
+- Results are saved to your investigation history
+- Press **Enter** or wait ~1 second after typing
+
+#### 📊 Dashboard
+- Shows live counts of assets, alerts, leaked credentials, correlations
+- Charts auto-populate from your real data
+- Click **Refresh** (sync icon) to reload latest data
+
+#### 🌐 Digital Footprint
+- View all discovered assets sorted by risk
+- Tabs: Subdomains · Services · Leaked Credentials · Cloud Exposures
+- Click any row → **View Profile** for full asset details
+
+#### 🔗 Exposure Correlation
+- Click **"Run Analysis"** to trigger the AI correlation engine
+- Engine cross-correlates assets + credentials + TI investigations + VirusTotal detections
+- Click **"AI Explain"** on any correlation card for Gemini's detailed analysis
+- Use **Delete** buttons to remove false positives
+
+#### 💥 Attack Path Simulation
+- Click **"Generate AI Paths"** — Gemini analyzes your real assets and builds realistic attack scenarios
+- Each path shows: Entry Point → MITRE ATT&CK stages → Target → Probability
+- Click **"AI Narrative"** for a full written security analysis
+- Click **"Generate Threat Personas"** to see predicted attacker profiles
+
+#### 🕸️ Infrastructure Graph
+- Auto-built from your discovered assets and their relationships
+- **Hover** a node to see VirusTotal detection count
+- **Filter** by risk level using the dropdown
+- **Legend** at bottom explains all connection types
+
+#### 📋 Reporting
+- Click **"Generate AI Report"** — requires both Gemini API key AND real data
+- Generates: Executive Summary · Key Findings · Immediate Actions · Compliance Gaps
+- **Export PDF** via browser print dialog
+
+#### 📡 Continuous Monitoring
+- Add domains/IPs under **Continuous scan targets**
+- Click **"Run scan now"** to immediately scan all targets
+- New assets and alerts appear automatically in Digital Footprint
+
+---
+
+## 🔧 Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **Port 5001 in use** | Run `npm run fresh` in `server/` instead of `npm run dev` |
+| **Blank dashboard / 401 errors** | Check `npm run dev` is running in `server/` on port 5001 |
+| **MongoDB connection failed** | Atlas → Network Access → add your IP. Check username, password, and `/shadownet` in the URI |
+| **Seed fails** | Fix MongoDB connection first, then retry `npm run seed` |
+| **"No data available" everywhere** | Expected! Investigate an IP/domain first using the header search bar |
+| **Gemini report returns 500** | Quota may be exhausted — resets at midnight UTC (5:30 AM IST). Try `gemini-1.5-flash` model |
+| **Correlation analysis returns 400** | Need at least one investigation in the database first |
+| **Session expired** | Log in again — access tokens expire after 15 minutes |
+| **React DevTools warning** | Safe to ignore — install [React DevTools](https://react.dev/link/react-devtools) browser extension optionally |
+
+### If you get `EADDRINUSE: address already in use :::5001`
+
+```bash
+cd server
+npm run fresh    # kills whatever is on port 5001, then starts clean
+```
+
+---
+
+## 📁 Project Structure
+
+```
 ShadowNet/
-├── client/          # React UI — npm install && npm run dev
-├── server/          # Express API — npm install && npm run dev
-├── docs/            # MongoDB Atlas guide
-├── scripts/         # run-dev.ps1 (Windows, starts both apps)
+├── client/                  # React 19 + Vite 7 frontend
+│   └── src/
+│       ├── pages/           # All page components
+│       ├── components/      # Shared UI components
+│       ├── context/         # AppContext (global state)
+│       └── services/        # API client (api.js)
+│
+├── server/                  # Node.js + Express backend
+│   ├── routes/              # REST API routes
+│   ├── models/              # Mongoose schemas
+│   ├── services/            # geminiService, correlationEngine, TI adapters
+│   ├── middleware/          # Auth, error handling
+│   └── server.js            # Entry point
+│
+├── docs/                    # MongoDB Atlas setup guide
+├── scripts/                 # run-dev.ps1 (Windows helper)
 └── README.md
 ```
 
-Dependencies live only in `client/node_modules` and `server/node_modules`. Database is **cloud-only** via MongoDB Atlas (no local MongoDB container).
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Vite 7, Tailwind CSS 4 |
+| Backend | Node.js, Express 4 |
+| Database | MongoDB Atlas (cloud, free M0 tier) |
+| AI | Google Gemini 1.5 Flash |
+| Threat Intel | VirusTotal · AbuseIPDB · AlienVault OTX · URLScan · ViewDNS · Criminal IP · ZoomEye · crt.sh · NVD · RIPEstat |
+| Auth | JWT (access + refresh tokens) |
+| Charts | Recharts |
 
 ---
 
-## Free API keys (optional)
+## 🔑 Environment Variables Reference
 
-All keys go in **`server/.env`**. The app runs without them using seed data and no-key sources.
+```env
+# REQUIRED
+PORT=5001
+MONGO_URI=mongodb+srv://...
+JWT_SECRET=...
+JWT_REFRESH_SECRET=...
 
-### Works without any API key
+# AI (strongly recommended)
+GEMINI_API_KEY=AIzaSy...
 
-| Source | Use |
-|--------|-----|
-| crt.sh | Certificates / subdomains |
-| DNS enum | Subdomain discovery |
-| OpenPhish / PhishTank | Phishing checks |
-| abuse.ch | Threat feeds |
-| NVD | CVE lookup (optional key for higher limits) |
-| RIPEstat | IP/domain WHOIS & routing |
-
-### Optional keys (free tiers)
-
-| Service | Sign up | `.env` variable |
-|---------|---------|-----------------|
-| Google Gemini | https://aistudio.google.com/apikey | `GEMINI_API_KEY` |
-| NVD (higher limits) | https://nvd.nist.gov/developers/request-an-api-key | `NVD_API_KEY` |
-| AlienVault OTX | https://otx.alienvault.com/ → API Integration | `ALIENVAULT_OTX_KEY` |
-| AbuseIPDB | https://www.abuseipdb.com/register → API | `ABUSEIPDB_API_KEY` |
-| VirusTotal | https://www.virustotal.com/gui/join-us | `VIRUSTOTAL_API_KEY` |
-| URLScan.io | https://urlscan.io/user/signup | `URLSCAN_API_KEY` |
-| ViewDNS | https://viewdns.info/api/ | `VIEWDNS_API_KEY` |
-| Criminal IP / ZoomEye / Hybrid Analysis | Vendor sites | See `server/.env.example` |
-
-Restart the API after changing `.env`.
+# Threat Intelligence
+VIRUSTOTAL_API_KEY=
+ABUSEIPDB_API_KEY=
+ALIENVAULT_OTX_KEY=
+URLSCAN_API_KEY=
+VIEWDNS_API_KEY=
+CRIMINALIP_API_KEY=
+ZOOMEYE_API_KEY=
+HYBRID_ANALYSIS_API_KEY=
+NVD_API_KEY=
+```
 
 ---
 
-## API reference (for developers)
+## 🔐 Security Notes
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Server status |
-| POST | `/api/auth/login` | `{ "email", "password" }` |
-| GET | `/api/dashboard/overview` | Stats (requires Bearer token) |
-| GET | `/api/ti/cve/:cveId` | NVD CVE lookup |
-| GET | `/api/ti/ip/:ip` | IP enrichment (AbuseIPDB, RIPEstat, etc.) |
-| GET | `/api/ti/status` | Enabled threat intel adapters |
+- **Never commit `server/.env` to Git** — already in `.gitignore`
+- Only scan domains/IPs you **own or are authorized to test**
+- Use strong, unique values for `JWT_SECRET` and `JWT_REFRESH_SECRET`
+- MongoDB Atlas free tier has a 512MB storage limit — sufficient for development
 
 ---
 
-## Troubleshooting
+## 📚 More Documentation
 
-| Problem | What to do |
-|---------|------------|
-| Blank dashboard / errors in UI | Is `npm run dev` running in **server** on port **5001**? Check http://localhost:5001/api/health |
-| MongoDB connection failed | Atlas → **Network Access** → add your IP. Check `MONGO_URI` user, password, and `/shadownet` in the URI → [Atlas guide](docs/MONGODB_ATLAS.md) |
-| Seed fails | Fix MongoDB first, then `cd server && npm run seed` |
-| Login works but no assets | Run `npm run seed` and log in as `analyst@shadownet.ai` |
-| Attack paths empty | Click **Generate new paths** or re-run seed |
-| Session expired | Log in again (tokens expire after 15 minutes) |
-
----
-
-## Technology stack
-
-React 19 · Vite 7 · Tailwind CSS 4 · Express · MongoDB Atlas · JWT · Google Gemini (optional) · Threat intel adapters (NVD, RIPEstat, VirusTotal, AbuseIPDB, crt.sh, and others)
-
----
-
-## Security notes
-
-- Never commit `server/.env` to Git.
-- Demo data uses fictional `shadownet.ai` assets—do not scan real third-party systems without permission.
-- Use strong `JWT_SECRET` values in production.
-
----
-
-## More documentation
-
-- [MongoDB Atlas setup](docs/MONGODB_ATLAS.md)
-- [Backend quick reference](server/README.md)
-- [Frontend quick reference](client/README.md)
+- [MongoDB Atlas Setup Guide](docs/MONGODB_ATLAS.md)
+- [Google AI Studio — Get Gemini API Key](https://aistudio.google.com/apikey)
+- [VirusTotal API Docs](https://docs.virustotal.com/)
+- [AbuseIPDB API Docs](https://docs.abuseipdb.com/)

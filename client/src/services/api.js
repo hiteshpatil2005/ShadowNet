@@ -108,6 +108,8 @@ export const credentialsAPI = {
   getCredential: (id) => apiFetch(`/credentials/${id}`),
   checkCredential: (email) => apiFetch('/credentials/check', { method: 'POST', body: JSON.stringify({ email }) }),
   updateCredential: (id, data) => apiFetch(`/credentials/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => apiFetch(`/credentials/${id}`, { method: 'DELETE' }),
+  deleteAll: () => apiFetch('/credentials', { method: 'DELETE' }),
 };
 
 // ═══════════════════════════════════════════════
@@ -122,6 +124,9 @@ export const correlationsAPI = {
   analyze: () => apiFetch('/correlations/analyze', { method: 'POST' }),
   getMatrix: () => apiFetch('/correlations/matrix'),
   getRiskyCombinations: () => apiFetch('/correlations/risky-combinations'),
+  getStats: () => apiFetch('/correlations/stats'),
+  delete: (id) => apiFetch(`/correlations/${id}`, { method: 'DELETE' }),
+  deleteAll: () => apiFetch('/correlations', { method: 'DELETE' }),
 };
 
 // ═══════════════════════════════════════════════
@@ -133,6 +138,8 @@ export const attackPathsAPI = {
   simulate: () => apiFetch('/attack-paths/simulate', { method: 'POST' }),
   getRecommendations: (id) => apiFetch(`/attack-paths/${id}/recommendations`),
   update: (id, data) => apiFetch(`/attack-paths/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  delete: (id) => apiFetch(`/attack-paths/${id}`, { method: 'DELETE' }),
+  geminiReport: (id) => apiFetch(`/attack-paths/${id}/recommendations`),
 };
 
 // ═══════════════════════════════════════════════
@@ -190,9 +197,10 @@ export const monitoringAPI = {
 // ═══════════════════════════════════════════════
 export const reportsAPI = {
   getAll: () => apiFetch('/reports'),
-  getReport: (id) => apiFetch(`/reports/${id}`),
-  generate: (data) => apiFetch('/reports/generate', { method: 'POST', body: JSON.stringify(data) }),
-  exportReport: (id) => apiFetch(`/reports/${id}/export`),
+  getLiveStats: () => apiFetch('/reports/live-stats'),
+  aiGenerate: () => apiFetch('/reports/ai-generate', { method: 'POST' }),
+  threatIntelSummary: () => apiFetch('/reports/threat-intel-summary', { method: 'POST' }),
+  narrative: (type) => apiFetch('/reports/narrative', { method: 'POST', body: JSON.stringify({ type }) }),
 };
 
 // ═══════════════════════════════════════════════
@@ -209,7 +217,26 @@ export const infrastructureAPI = {
 // ═══════════════════════════════════════════════
 export const searchAPI = {
   investigate: (q) => apiFetch(`/search/investigate?q=${encodeURIComponent(q)}`),
+  getHistory: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/search/history${qs ? `?${qs}` : ''}`);
+  },
 };
+
+// ═══════════════════════════════════════════════
+// Investigations API
+// ═══════════════════════════════════════════════
+export const investigationsAPI = {
+  getAll: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return apiFetch(`/investigations${qs ? `?${qs}` : ''}`);
+  },
+  getById: (id) => apiFetch(`/investigations/${id}`),
+  delete: (id) => apiFetch(`/investigations/${id}`, { method: 'DELETE' }),
+  deleteAll: () => apiFetch('/investigations', { method: 'DELETE' }),
+  getSummary: () => apiFetch('/investigations/stats/summary'),
+};
+
 
 // ═══════════════════════════════════════════════
 // Threat Intelligence API

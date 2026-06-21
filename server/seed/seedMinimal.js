@@ -38,7 +38,7 @@ async function seed() {
       industry: 'Technology',
       size: 50,
       api_quota: 10000,
-      subscription_tier: 'standard',
+      subscription_tier: 'enterprise',
     });
 
     const passwordHash = await bcrypt.hash('ShadowNet2026!', 12);

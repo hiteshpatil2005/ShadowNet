@@ -19,7 +19,5 @@ export default class ZoomEyeAdapter extends BaseAdapter {
     return { total: data?.total || 0, services: matches.map(m => ({ ip: m.ip, port: m.portinfo?.port, service: m.portinfo?.service, banner: m.portinfo?.banner?.slice(0, 200), os: m.portinfo?.os })) };
   }
 
-  getFallback(target) {
-    return { _source: 'zoomeye', _fallback: true, target, total: 2, matches: [{ ip: target, port: 443, service: 'https', banner: '', os: 'Linux', app: 'nginx' }, { ip: target, port: 22, service: 'ssh', banner: 'SSH-2.0-OpenSSH_8.9', os: 'Linux' }] };
-  }
+  getFallback(target) { return null; }
 }

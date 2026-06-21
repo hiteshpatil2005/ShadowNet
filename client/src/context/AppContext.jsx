@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import {
+
   authAPI,
   dashboardAPI,
   assetsAPI,
@@ -9,6 +10,7 @@ import {
   threatPersonasAPI,
   monitoringAPI,
   correlationsAPI,
+  investigationsAPI,
   setTokens,
   clearTokens,
   getToken,
@@ -34,6 +36,7 @@ export const AppProvider = ({ children }) => {
   const [threatPersonas, setThreatPersonas] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [correlations, setCorrelations] = useState([]);
+  const [investigations, setInvestigations] = useState([]);
 
   // Active investigation/pivot state
   const [selectedAssetId, setSelectedAssetId] = useState(null);
@@ -61,6 +64,7 @@ export const AppProvider = ({ children }) => {
         rulesRes,
         corrRes,
         overviewRes,
+        investigationsRes,
       ] = await Promise.allSettled([
         assetsAPI.getFootprint({ limit: 200 }),
         credentialsAPI.getLeaked({ limit: 200 }),
@@ -70,6 +74,7 @@ export const AppProvider = ({ children }) => {
         monitoringAPI.getRules(),
         correlationsAPI.getAll(),
         dashboardAPI.getOverview(),
+        investigationsAPI.getAll({ limit: 100 }),
       ]);
 
       // Process assets — separate subdomains from cloud resources
@@ -211,6 +216,10 @@ export const AppProvider = ({ children }) => {
         setDashboardData(overviewRes.value.data || null);
       }
 
+      if (investigationsRes.status === 'fulfilled') {
+        setInvestigations(investigationsRes.value.data || []);
+      }
+
     } catch (error) {
       console.error('[AppContext] Data fetch error:', error);
     } finally {
@@ -298,6 +307,7 @@ export const AppProvider = ({ children }) => {
     setDashboardData(null);
     setCorrelations([]);
     setMonitoringRules([]);
+    setInvestigations([]);
   };
 
   // ═══════════════════════════════════════════════
@@ -431,6 +441,8 @@ export const AppProvider = ({ children }) => {
       setThreatPersonas,
       correlations,
       setCorrelations,
+      investigations,
+      setInvestigations,
       dashboardData,
       setDashboardData,
       selectedAssetId,

@@ -15,7 +15,5 @@ export default class AbuseIPDBAdapter extends BaseAdapter {
     return { ip: d.ipAddress, abuse_score: d.abuseConfidenceScore || 0, total_reports: d.totalReports || 0, country: d.countryCode || '', isp: d.isp || '', usage_type: d.usageType || '', domain: d.domain || '', is_public: d.isPublic, is_tor: d.isTor, last_reported: d.lastReportedAt };
   }
 
-  getFallback(target) {
-    return { _source: 'abuseipdb', _fallback: true, target, ip: target, abuse_score: 15, total_reports: 3, country: 'US', isp: 'Amazon Web Services', usage_type: 'Data Center/Web Hosting/Transit', domain: 'amazonaws.com', is_public: true, is_tor: false };
-  }
+  getFallback(target) { return null; }
 }

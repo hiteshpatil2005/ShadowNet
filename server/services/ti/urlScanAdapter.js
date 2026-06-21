@@ -15,7 +15,5 @@ export default class UrlScanAdapter extends BaseAdapter {
     return { uuid: data?.uuid, api: data?.api, visibility: data?.visibility, url: data?.url };
   }
 
-  getFallback(target) {
-    return { _source: 'urlscan', _fallback: true, target, total: 1, results: [{ url: `https://${target}`, domain: target, ip: '93.184.216.34', status: 200, title: target, screenshot: null }] };
-  }
+  getFallback(target) { return null; }
 }

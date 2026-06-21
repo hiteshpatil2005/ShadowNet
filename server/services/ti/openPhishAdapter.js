@@ -11,7 +11,5 @@ export default class OpenPhishAdapter extends BaseAdapter {
     return { total_feed: urls.length, matches: matches.slice(0, 20), is_phishing: matches.length > 0 };
   }
 
-  getFallback(target) {
-    return { _source: 'openphish', _fallback: true, target, total_feed: 0, matches: [], is_phishing: false };
-  }
+  getFallback(target) { return null; }
 }

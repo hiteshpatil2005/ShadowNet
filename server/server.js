@@ -22,6 +22,7 @@ import infrastructureRoutes from './routes/infrastructure.js';
 import adminRoutes from './routes/admin.js';
 import tiRoutes from './routes/ti.js';
 import searchRoutes from './routes/search.js';
+import investigationRoutes from './routes/investigations.js';
 import { startScanScheduler } from './services/scanScheduler.js';
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/infrastructure', infrastructureRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ti', tiRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/investigations', investigationRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -64,19 +66,47 @@ app.use((req, res) => {
   res.status(404).json({ status: 'error', error_code: 'NOT_FOUND', message: `Route ${req.method} ${req.path} not found.` });
 });
 
+
 // Start server
 const start = async () => {
   await connectDB();
   startScanScheduler();
-  app.listen(env.PORT, () => {
+
+  const server = app.listen(env.PORT, () => {
     console.log(`\n🛡️  ShadowNet AI Backend running on port ${env.PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`   API Base: http://localhost:${env.PORT}/api`);
     console.log(`   Health: http://localhost:${env.PORT}/api/health`);
     console.log(`   Continuous TI scanning: enabled\n`);
   });
+
+  // Graceful shutdown — required for node --watch to release the port
+  const shutdown = (signal) => {
+    console.log(`\n[SERVER] ${signal} received — shutting down gracefully...`);
+    server.close(() => {
+      console.log('[SERVER] HTTP server closed.');
+      process.exit(0);
+    });
+    // Force exit after 3s if connections don't close
+    setTimeout(() => { process.exit(0); }, 3000).unref();
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
+
+  // Handle port-in-use without crashing node --watch loop
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[SERVER] Port ${env.PORT} is already in use. Kill the existing process and restart.`);
+      process.exit(1);
+    } else {
+      console.error('[SERVER] Unexpected error:', err);
+      process.exit(1);
+    }
+  });
 };
 
 start().catch(err => { console.error('Failed to start server:', err); process.exit(1); });
 
 export default app;
+

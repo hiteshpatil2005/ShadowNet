@@ -22,7 +22,5 @@ export default class AlienVaultAdapter extends BaseAdapter {
 
   isFreeNoKey() { return true; } // OTX works without key (limited)
 
-  getFallback(target) {
-    return { _source: 'alienvault', _fallback: true, target, pulse_count: 3, pulses: [{ name: 'Suspicious Infrastructure', description: 'Associated with known malicious activity' }], reputation: null, country: 'US' };
-  }
+  getFallback(target) { return null; }
 }

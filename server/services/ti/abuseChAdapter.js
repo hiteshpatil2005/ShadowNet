@@ -18,7 +18,5 @@ export default class AbuseChAdapter extends BaseAdapter {
     return { query_status: data?.query_status, data: data?.data?.[0] || null };
   }
 
-  getFallback(target) {
-    return { _source: 'abusech', _fallback: true, target, query_status: 'no_results', url_count: 0, urls: [] };
-  }
+  getFallback(target) { return null; }
 }

@@ -69,19 +69,12 @@ export default class ViewDnsAdapter extends BaseAdapter {
 
     return {
       domain,
-      subdomains: subdomains.length > 0 ? subdomains : [`www.${domain}`, `mail.${domain}`],
-      count: subdomains.length || 2,
+      subdomains,
+      count: subdomains.length,
       dns: dnsRecords,
       raw_records: records.slice(0, 30),
     };
   }
 
-  getFallback(target) {
-    return {
-      _source: 'viewdns', _fallback: true, target,
-      subdomains: [`www.${target}`, `mail.${target}`, `vpn.${target}`, `api.${target}`],
-      count: 4,
-      dns: { A: ['93.184.216.34'], MX: ['mail.' + target], NS: ['ns1.' + target] },
-    };
-  }
+  getFallback(target) { return null; }
 }

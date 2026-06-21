@@ -1,122 +1,180 @@
+/**
+ * ShadowNet AI — Reports Route
+ * AI-generated executive security reports + export support.
+ */
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import DigitalAsset from '../models/DigitalAsset.js';
 import LeakedCredential from '../models/LeakedCredential.js';
 import Correlation from '../models/Correlation.js';
 import AttackPath from '../models/AttackPath.js';
-import ThreatPersona from '../models/ThreatPersona.js';
-import RiskNarrative from '../models/RiskNarrative.js';
+import Investigation from '../models/Investigation.js';
 import ExposureEvent from '../models/ExposureEvent.js';
-import { generateNarrative } from '../services/geminiService.js';
+import { generateFullReport, generateThreatIntelSummary, generateNarrative } from '../services/geminiService.js';
+import env from '../config/env.js';
 
 const router = Router();
-const generatedReports = new Map();
 
-// GET /api/reports
+// GET /api/reports — list saved reports (placeholder — could be expanded to save reports)
 router.get('/', authenticate, async (req, res, next) => {
   try {
-    const narratives = await RiskNarrative.find({ organization_id: req.organizationId }).sort({ generated_at: -1 });
-    const reports = narratives.map(n => ({
-      id: n._id,
-      title: n.title,
-      type: n.narrative_type,
-      generated_at: n.generated_at,
-      summary: n.summary,
-      confidence_level: n.confidence_level,
-    }));
-    // Include in-memory reports
-    for (const [id, report] of generatedReports) {
-      if (report.organization_id?.toString() === req.organizationId.toString()) {
-        reports.unshift({ id, ...report });
-      }
-    }
-    res.json({ status: 'success', data: reports });
-  } catch (error) { next(error); }
-});
-
-// POST /api/reports/generate
-router.post('/generate', authenticate, async (req, res, next) => {
-  try {
-    const { report_type = 'executive_summary', title = 'Security Assessment Report' } = req.body;
+    // Return summary stats for report generation
     const orgId = req.organizationId;
-
-    const [assets, credentials, correlations, attackPaths, personas, alerts] = await Promise.all([
-      DigitalAsset.find({ organization_id: orgId }),
-      LeakedCredential.find({ organization_id: orgId }),
-      Correlation.find({ organization_id: orgId }).sort({ risk_score: -1 }),
-      AttackPath.find({ organization_id: orgId }),
-      ThreatPersona.find({ organization_id: orgId }),
-      ExposureEvent.find({ organization_id: orgId }),
+    const [assets, creds, corrs, attacks, investigations] = await Promise.all([
+      DigitalAsset.countDocuments({ organization_id: orgId }),
+      LeakedCredential.countDocuments({ organization_id: orgId }),
+      Correlation.countDocuments({ organization_id: orgId }),
+      AttackPath.countDocuments({ organization_id: orgId }),
+      Investigation.countDocuments({ organization_id: orgId }),
     ]);
 
-    const reportData = {
-      overview: {
-        total_assets: assets.length,
-        critical_assets: assets.filter(a => a.risk_level === 'critical').length,
-        high_risk_assets: assets.filter(a => a.risk_level === 'high').length,
-        total_credentials: credentials.length,
-        total_correlations: correlations.length,
-        total_attack_paths: attackPaths.length,
-        total_alerts: alerts.length,
-        unresolved_alerts: alerts.filter(a => !a.acknowledged).length,
+    res.json({
+      status: 'success',
+      data: {
+        available_data: { assets, credentials: creds, correlations: corrs, attack_paths: attacks, investigations },
+        can_generate: assets > 0 || investigations > 0,
+        requires_gemini: !env.GEMINI_API_KEY,
       },
-      top_risks: correlations.slice(0, 5).map(c => ({ title: c.title, score: c.risk_score, severity: c.severity })),
-      attack_paths: attackPaths.map(p => ({ name: p.name, type: p.attack_scenario_type, probability: p.probability, impact: p.impact })),
-      threat_personas: personas.map(p => ({ name: p.name, type: p.predicted_attacker_type, confidence: p.confidence })),
-      assets_by_risk: { critical: assets.filter(a => a.risk_level === 'critical').length, high: assets.filter(a => a.risk_level === 'high').length, medium: assets.filter(a => a.risk_level === 'medium').length, low: assets.filter(a => a.risk_level === 'low').length },
-    };
-
-    // Generate AI narrative
-    const narrative = await generateNarrative(report_type, reportData);
-
-    const report = await RiskNarrative.create({
-      organization_id: orgId,
-      narrative_type: report_type,
-      title: title || narrative.title,
-      content: narrative.content,
-      summary: narrative.summary,
-      key_findings: narrative.key_findings,
-      business_impact: narrative.business_impact,
-      recommended_actions: narrative.recommended_actions,
-      confidence_level: narrative.confidence_level,
-      supporting_data: reportData,
     });
-
-    res.json({ status: 'success', data: report });
   } catch (error) { next(error); }
 });
 
-// GET /api/reports/:id
-router.get('/:id', authenticate, async (req, res, next) => {
+// POST /api/reports/ai-generate — Full Gemini AI executive security report
+router.post('/ai-generate', authenticate, async (req, res, next) => {
   try {
-    const report = await RiskNarrative.findOne({ _id: req.params.id, organization_id: req.organizationId });
-    if (!report) return res.status(404).json({ status: 'error', message: 'Report not found.' });
-    res.json({ status: 'success', data: report });
+    if (!env.GEMINI_API_KEY) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'GEMINI_API_KEY is not configured. Add it to server/.env to enable AI report generation.',
+      });
+    }
+
+    const orgId = req.organizationId;
+    const [assets, credentials, correlations, investigations, attackPaths] = await Promise.all([
+      DigitalAsset.find({ organization_id: orgId }).limit(30).lean(),
+      LeakedCredential.find({ organization_id: orgId }).limit(20).lean(),
+      Correlation.find({ organization_id: orgId }).sort({ risk_score: -1 }).limit(15).lean(),
+      Investigation.find({ organization_id: orgId }).sort({ risk_score: -1 }).limit(20).lean(),
+      AttackPath.find({ organization_id: orgId }).limit(5).lean(),
+    ]);
+
+    if (assets.length === 0 && investigations.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'No data available for report generation. Investigate some indicators first.',
+      });
+    }
+
+    const result = await generateFullReport(assets, credentials, correlations, investigations, attackPaths);
+
+    if (result.error) {
+      return res.status(500).json({ status: 'error', message: result.error });
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        report: result.report,
+        generated_at: new Date().toISOString(),
+        data_sources: {
+          assets_analyzed: assets.length,
+          credentials_analyzed: credentials.length,
+          correlations_analyzed: correlations.length,
+          investigations_analyzed: investigations.length,
+          attack_paths_analyzed: attackPaths.length,
+        },
+      },
+    });
   } catch (error) { next(error); }
 });
 
-// GET /api/reports/:id/export
-router.get('/:id/export', authenticate, async (req, res, next) => {
+// POST /api/reports/threat-intel-summary — Gemini summary of investigations
+router.post('/threat-intel-summary', authenticate, async (req, res, next) => {
   try {
-    const report = await RiskNarrative.findOne({ _id: req.params.id, organization_id: req.organizationId });
-    if (!report) return res.status(404).json({ status: 'error', message: 'Report not found.' });
+    if (!env.GEMINI_API_KEY) {
+      return res.status(400).json({ status: 'error', message: 'GEMINI_API_KEY not configured.' });
+    }
 
-    // Return as downloadable JSON
-    const exportData = {
-      report_title: report.title,
-      report_type: report.narrative_type,
-      generated_at: report.generated_at,
-      content: report.content,
-      summary: report.summary,
-      key_findings: report.key_findings,
-      business_impact: report.business_impact,
-      recommended_actions: report.recommended_actions,
-      supporting_data: report.supporting_data,
-    };
+    const investigations = await Investigation.find({ organization_id: req.organizationId })
+      .sort({ risk_score: -1 }).limit(20).lean();
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="shadownet-report-${report._id}.json"`);
-    res.json(exportData);
+    if (!investigations.length) {
+      return res.status(400).json({ status: 'error', message: 'No investigations found.' });
+    }
+
+    const summary = await generateThreatIntelSummary(investigations);
+    res.json({ status: 'success', data: summary });
+  } catch (error) { next(error); }
+});
+
+// POST /api/reports/narrative — Custom narrative
+router.post('/narrative', authenticate, async (req, res, next) => {
+  try {
+    const { type = 'executive', scope = 'full' } = req.body;
+    const orgId = req.organizationId;
+
+    const [assets, creds, corrs, investigations] = await Promise.all([
+      DigitalAsset.find({ organization_id: orgId }).limit(20).lean(),
+      LeakedCredential.find({ organization_id: orgId }).limit(10).lean(),
+      Correlation.find({ organization_id: orgId }).sort({ risk_score: -1 }).limit(10).lean(),
+      Investigation.find({ organization_id: orgId }).sort({ risk_score: -1 }).limit(10).lean(),
+    ]);
+
+    const narrative = await generateNarrative(type, { assets, credentials: creds, correlations: corrs, investigations });
+    res.json({ status: 'success', data: narrative });
+  } catch (error) { next(error); }
+});
+
+// GET /api/reports/live-stats — live dashboard stats for report page
+router.get('/live-stats', authenticate, async (req, res, next) => {
+  try {
+    const orgId = req.organizationId;
+    const [
+      totalAssets, criticalAssets, highAssets,
+      totalCreds, criticalCreds,
+      totalCorrs, criticalCorrs,
+      totalAlerts, openAlerts,
+      totalInvestigations, maliciousInv,
+      attackPaths,
+    ] = await Promise.all([
+      DigitalAsset.countDocuments({ organization_id: orgId }),
+      DigitalAsset.countDocuments({ organization_id: orgId, risk_level: 'critical' }),
+      DigitalAsset.countDocuments({ organization_id: orgId, risk_level: 'high' }),
+      LeakedCredential.countDocuments({ organization_id: orgId }),
+      LeakedCredential.countDocuments({ organization_id: orgId, severity: 'CRITICAL' }),
+      Correlation.countDocuments({ organization_id: orgId }),
+      Correlation.countDocuments({ organization_id: orgId, severity: 'CRITICAL' }),
+      ExposureEvent.countDocuments({ organization_id: orgId }),
+      ExposureEvent.countDocuments({ organization_id: orgId, status: { $nin: ['Resolved', 'Closed'] } }),
+      Investigation.countDocuments({ organization_id: orgId }),
+      Investigation.countDocuments({ organization_id: orgId, verdict: 'malicious' }),
+      AttackPath.countDocuments({ organization_id: orgId }),
+    ]);
+
+    const avgRisk = await DigitalAsset.aggregate([
+      { $match: { organization_id: orgId } },
+      { $group: { _id: null, avg: { $avg: '$risk_score' } } },
+    ]);
+
+    res.json({
+      status: 'success',
+      data: {
+        total_assets: totalAssets,
+        critical_assets: criticalAssets,
+        high_assets: highAssets,
+        total_credentials: totalCreds,
+        critical_credentials: criticalCreds,
+        total_correlations: totalCorrs,
+        critical_correlations: criticalCorrs,
+        total_alerts: totalAlerts,
+        open_alerts: openAlerts,
+        total_investigations: totalInvestigations,
+        malicious_indicators: maliciousInv,
+        attack_paths: attackPaths,
+        average_risk_score: Math.round(avgRisk[0]?.avg || 0),
+        has_data: totalAssets > 0 || totalInvestigations > 0,
+      },
+    });
   } catch (error) { next(error); }
 });
 

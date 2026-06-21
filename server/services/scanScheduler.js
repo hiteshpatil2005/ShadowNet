@@ -2,7 +2,7 @@ import Organization from '../models/Organization.js';
 import MonitoringConfig from '../models/MonitoringConfig.js';
 import tiOrchestrator from './ti/index.js';
 import { ingestEnrichment } from './scanIngestion.js';
-import { normalizeTarget } from '../utils/targetDetect.js';
+import { detectTargetType, normalizeTarget } from '../utils/targetDetect.js';
 import env from '../config/env.js';
 
 let intervalHandle = null;
@@ -16,21 +16,27 @@ export async function runOrgScan(orgId) {
   const results = [];
 
   for (const t of targets) {
-    const target = normalizeTarget(t.target);
-    if (!target) continue;
+    const raw = t.target || t;
+    const normalized = normalizeTarget(raw);
+    if (!normalized) continue;
+
+    const type = t.type || detectTargetType(raw);
     try {
       let enrichment;
-      if (t.type === 'ip' || /^\d{1,3}(\.\d{1,3}){3}$/.test(target)) {
-        enrichment = await tiOrchestrator.enrichIP(target);
-      } else {
-        enrichment = await tiOrchestrator.enrichDomain(target);
+      if (type === 'ip') enrichment = await tiOrchestrator.enrichIP(normalized);
+      else if (type === 'domain') enrichment = await tiOrchestrator.enrichDomain(normalized);
+      else if (type === 'url') enrichment = await tiOrchestrator.checkURL(normalized);
+      else if (type === 'hash') enrichment = await tiOrchestrator.checkMalware(normalized);
+      else if (type === 'cve') enrichment = await tiOrchestrator.lookupCVE(normalized);
+      else enrichment = await tiOrchestrator.enrichDomain(normalized);
+
+      if (enrichment && (type === 'ip' || type === 'domain')) {
+        await ingestEnrichment(orgId, normalized, enrichment);
       }
-      enrichment.type = t.type || (enrichment.ip ? 'ip' : 'domain');
-      const ingested = await ingestEnrichment(orgId, target, enrichment);
-      results.push({ target, status: 'ok', ingested });
+      results.push({ target: normalized, type, status: 'ok' });
       t.last_scanned = new Date();
     } catch (err) {
-      results.push({ target, status: 'error', error: err.message });
+      results.push({ target: normalized, type, status: 'error', error: err.message });
     }
   }
 
@@ -51,12 +57,13 @@ async function tick() {
       const config = await MonitoringConfig.findOne({ organization_id: org._id });
       if (!config?.monitoring_enabled || !(config.scan_targets || []).length) continue;
 
-      const intervalHours = config.scan_interval_hours ?? (config.scan_interval > 12 ? config.scan_interval / 60 : config.scan_interval) ?? 1;
-      const intervalMs = Math.max(5, Number(intervalHours)) * 60 * 60 * 1000;
+      // Default: 15 minutes = 0.25 hours
+      const intervalHours = config.scan_interval_hours ?? config.scan_interval ?? 0.25;
+      const intervalMs = Math.max(0.25, Number(intervalHours)) * 60 * 60 * 1000;
       const last = config.last_scan_at ? new Date(config.last_scan_at).getTime() : 0;
       if (Date.now() - last < intervalMs) continue;
 
-      console.log(`[SCAN] Running scheduled scan for org ${org._id}`);
+      console.log(`[SCAN] Running scheduled scan for org ${org._id} (${config.scan_targets.length} targets)`);
       await runOrgScan(org._id);
     }
   } catch (err) {
@@ -68,10 +75,11 @@ async function tick() {
 
 export function startScanScheduler() {
   if (intervalHandle) return;
-  const ms = Math.max(60_000, env.SCAN_POLL_MS);
-  console.log(`[SCAN] Continuous scanner started (check every ${ms / 1000}s)`);
+  // Default poll: every 15 minutes (900000ms)
+  const ms = Math.max(60_000, env.SCAN_POLL_MS || 900_000);
+  console.log(`[SCAN] Continuous scanner started (check every ${ms / 60000} min)`);
   intervalHandle = setInterval(tick, ms);
-  setTimeout(tick, 10_000);
+  setTimeout(tick, 15_000); // Initial tick 15 seconds after startup
 }
 
 export function stopScanScheduler() {
